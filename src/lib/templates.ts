@@ -19,7 +19,7 @@ const TEMPLATE_DEFS: TemplateDefinition[] = [
     preview: { bg1: "#ffffff", bg2: "#f0f0f0", angle: 180, textColor: "#111111" },
     title: "Simple & Clean",
     fontFamily: "Inter",
-    deviceId: "iphone15pro",
+    deviceId: "iosgeneric",
   },
   {
     id: "minimal-gray",
@@ -28,7 +28,7 @@ const TEMPLATE_DEFS: TemplateDefinition[] = [
     preview: { bg1: "#e5e5e5", bg2: "#d4d4d4", angle: 135, textColor: "#262626" },
     title: "Elegant Design",
     fontFamily: "DM Sans",
-    deviceId: "iphone15pro",
+    deviceId: "iosgeneric",
   },
   {
     id: "bold-red",
@@ -37,7 +37,7 @@ const TEMPLATE_DEFS: TemplateDefinition[] = [
     preview: { bg1: "#dc2626", bg2: "#991b1b", angle: 180, textColor: "#ffffff" },
     title: "Make a Statement",
     fontFamily: "Montserrat",
-    deviceId: "iphone15pro",
+    deviceId: "iosgeneric",
   },
   {
     id: "bold-blue",
@@ -55,7 +55,7 @@ const TEMPLATE_DEFS: TemplateDefinition[] = [
     preview: { bg1: "#f97316", bg2: "#ec4899", angle: 135, textColor: "#ffffff" },
     title: "Beautiful Moments",
     fontFamily: "Playfair Display",
-    deviceId: "iphone15pro",
+    deviceId: "iosgeneric",
   },
   {
     id: "gradient-ocean",
@@ -64,7 +64,7 @@ const TEMPLATE_DEFS: TemplateDefinition[] = [
     preview: { bg1: "#06b6d4", bg2: "#8b5cf6", angle: 135, textColor: "#ffffff" },
     title: "Dive Deep",
     fontFamily: "Poppins",
-    deviceId: "iphone15pro",
+    deviceId: "iosgeneric",
   },
   {
     id: "gradient-aurora",
@@ -82,7 +82,7 @@ const TEMPLATE_DEFS: TemplateDefinition[] = [
     preview: { bg1: "#0f172a", bg2: "#1e293b", angle: 180, textColor: "#e2e8f0" },
     title: "Dark Mode Ready",
     fontFamily: "Space Grotesk",
-    deviceId: "iphone15pro",
+    deviceId: "iosgeneric",
   },
   {
     id: "dark-charcoal",
@@ -91,7 +91,7 @@ const TEMPLATE_DEFS: TemplateDefinition[] = [
     preview: { bg1: "#171717", bg2: "#262626", angle: 135, textColor: "#d4d4d4" },
     title: "Sleek & Dark",
     fontFamily: "DM Sans",
-    deviceId: "iphone15pro",
+    deviceId: "iosgeneric",
   },
   {
     id: "colorful-candy",
@@ -100,7 +100,7 @@ const TEMPLATE_DEFS: TemplateDefinition[] = [
     preview: { bg1: "#f472b6", bg2: "#a78bfa", angle: 120, textColor: "#ffffff" },
     title: "Sweet & Fun",
     fontFamily: "Poppins",
-    deviceId: "iphone15pro",
+    deviceId: "iosgeneric",
   },
   {
     id: "colorful-tropical",
@@ -118,7 +118,7 @@ const TEMPLATE_DEFS: TemplateDefinition[] = [
     preview: { bg1: "#a855f7", bg2: "#ec4899", angle: 45, textColor: "#ffffff" },
     title: "Glow Up",
     fontFamily: "Space Grotesk",
-    deviceId: "iphone15pro",
+    deviceId: "iosgeneric",
   },
 ];
 

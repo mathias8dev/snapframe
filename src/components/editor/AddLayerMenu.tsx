@@ -67,7 +67,7 @@ const LAYER_OPTIONS = [
       type: "device",
       visible: true,
       locked: false,
-      deviceId: "iphone15pro",
+      deviceId: "iosgeneric",
       orientation: "portrait",
       sizing: "contain",
       cornerRounding: "auto",

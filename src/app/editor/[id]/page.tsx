@@ -45,7 +45,7 @@ export default function EditorPage() {
     }
 
     if (id === "new") {
-      const p = createProject("Untitled Project", "iphone15pro");
+      const p = createProject("Untitled Project", "iosgeneric");
       router.replace(`/editor/${p.id}`);
       setLoaded(true);
       return;
@@ -56,7 +56,7 @@ export default function EditorPage() {
     if (existing) {
       loadProject(existing);
     } else {
-      const p = createProject("Untitled Project", "iphone15pro");
+      const p = createProject("Untitled Project", "iosgeneric");
       router.replace(`/editor/${p.id}`);
     }
     setLoaded(true);

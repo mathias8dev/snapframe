@@ -20,8 +20,7 @@ export default function DevicePicker({
   if (!isOpen) return null;
 
   const categories = {
-    iphone: DEVICE_LIST.filter((d) => d.category === "iphone"),
-    ipad: DEVICE_LIST.filter((d) => d.category === "ipad"),
+    ios: DEVICE_LIST.filter((d) => d.category === "ios"),
     android: DEVICE_LIST.filter((d) => d.category === "android"),
   };
 
@@ -42,7 +41,7 @@ export default function DevicePicker({
           {Object.entries(categories).map(([cat, devices]) => (
             <div key={cat}>
               <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
-                {cat === "iphone" ? "iPhone" : cat === "ipad" ? "iPad" : "Android"}
+                {cat === "ios" ? "iOS" : "Android"}
               </h3>
               <div className="flex flex-col gap-1">
                 {devices.map((device) => (

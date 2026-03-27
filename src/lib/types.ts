@@ -83,7 +83,7 @@ export interface ImageLayer extends BaseLayer {
 export interface DeviceConfig {
   id: string;
   name: string;
-  category: "iphone" | "ipad" | "android";
+  category: "ios" | "android";
   exportWidth: number;
   exportHeight: number;
   aspectRatio: number;

@@ -308,9 +308,16 @@ function DeviceControls({
   slideId: string;
 }) {
   const updateLayer = useEditorStore((s) => s.updateLayer);
+  const project = useEditorStore((s) => s.project);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const update = (patch: Partial<DeviceLayer>) =>
     updateLayer(slideId, layer.id, patch);
+
+  // Filter devices by the project's target device category
+  const targetDevice = DEVICE_LIST.find((d) => d.id === project?.deviceTarget);
+  const filteredDevices = targetDevice
+    ? DEVICE_LIST.filter((d) => d.category === targetDevice.category)
+    : DEVICE_LIST;
 
   const handleScreenshotUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -344,7 +351,7 @@ function DeviceControls({
           onChange={(e) => update({ deviceId: e.target.value })}
           className="bg-surface border border-border rounded-md px-2 py-1.5 text-sm text-foreground"
         >
-          {DEVICE_LIST.map((d) => (
+          {filteredDevices.map((d) => (
             <option key={d.id} value={d.id}>
               {d.name}
             </option>

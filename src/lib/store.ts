@@ -84,7 +84,7 @@ function createDefaultSlide(): Slide {
         type: "device",
         visible: true,
         locked: false,
-        deviceId: "iphone15pro",
+        deviceId: "iosgeneric",
         orientation: "portrait",
         sizing: "contain",
         cornerRounding: "auto",
@@ -148,6 +148,14 @@ const useEditorStore = create<EditorStore>()(
         set((state) => {
           if (state.project) {
             state.project.deviceTarget = target;
+            // Update all device layers to the new target device
+            for (const slide of state.project.slides) {
+              for (const layer of slide.layers) {
+                if (layer.type === "device") {
+                  layer.deviceId = target;
+                }
+              }
+            }
             state.project.updatedAt = Date.now();
           }
         }),

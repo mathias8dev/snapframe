@@ -95,7 +95,7 @@ export default function Toolbar() {
       <div className="flex items-center gap-2">
         <Monitor size={14} className="text-muted" />
         <select
-          value={project?.deviceTarget ?? "iphone15pro"}
+          value={project?.deviceTarget ?? "iosgeneric"}
           onChange={(e) => setDeviceTarget(e.target.value)}
           className="bg-surface border border-border rounded-md px-2 py-1 text-xs text-foreground"
         >

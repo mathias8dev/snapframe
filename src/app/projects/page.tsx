@@ -26,7 +26,7 @@ export default function ProjectsPage() {
   }, []);
 
   const handleNewProject = () => {
-    const project = createNewProject("Untitled Project", "iphone15pro");
+    const project = createNewProject("Untitled Project", "iosgeneric");
     persistProjectSync(project);
     useEditorStore.getState().loadProject(project);
     router.push(`/editor/${project.id}`);
