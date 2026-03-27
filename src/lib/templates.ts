@@ -182,6 +182,8 @@ export function createProjectFromTemplate(template: TemplateDefinition): Project
             frameOpacity: 1,
             padding: 40,
             rotation: 0,
+            offsetX: 0,
+            offsetY: 0,
             screenshotUrl: null,
           } as DeviceLayer,
         ],

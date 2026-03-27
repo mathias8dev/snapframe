@@ -126,15 +126,18 @@ function DeviceRenderer({
   canvasHeight,
   onSelect,
   isSelected,
+  slideId,
 }: {
   layer: DeviceLayer;
   canvasWidth: number;
   canvasHeight: number;
   onSelect: () => void;
   isSelected: boolean;
+  slideId: string;
 }) {
   const device = DEVICES[layer.deviceId];
   const screenshotImage = useLoadImage(layer.screenshotUrl);
+  const updateLayer = useEditorStore((s) => s.updateLayer);
   if (!layer.visible || !device) return null;
 
   const padding = layer.padding;
@@ -161,6 +164,8 @@ function DeviceRenderer({
   const screenH = frameH - (device.screenInset.top + device.screenInset.bottom) * scale;
 
   // Rotation pivot: center of the device frame
+  const oX = layer.offsetX ?? 0;
+  const oY = layer.offsetY ?? 0;
   const pivotX = frameX + frameW / 2;
   const pivotY = frameY + frameH / 2;
 
@@ -168,11 +173,17 @@ function DeviceRenderer({
     <Group
       onClick={onSelect}
       onTap={onSelect}
+      draggable={!layer.locked}
       rotation={layer.rotation ?? 0}
       offsetX={pivotX}
       offsetY={pivotY}
-      x={pivotX}
-      y={pivotY}
+      x={pivotX + oX}
+      y={pivotY + oY}
+      onDragEnd={(e) => {
+        const newOX = e.target.x() - pivotX;
+        const newOY = e.target.y() - pivotY;
+        updateLayer(slideId, layer.id, { offsetX: newOX, offsetY: newOY });
+      }}
     >
       {/* Device frame */}
       {layer.frameVisible && (
@@ -393,6 +404,7 @@ export default function Canvas() {
                       canvasHeight={dimensions.height}
                       onSelect={() => setActiveLayer(layer.id)}
                       isSelected={isSelected}
+                      slideId={slide.id}
                     />
                   );
                 case "image":

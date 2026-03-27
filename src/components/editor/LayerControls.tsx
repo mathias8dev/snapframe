@@ -429,6 +429,22 @@ function DeviceControls({
       />
 
       <SliderControl
+        label="Offset X"
+        value={layer.offsetX ?? 0}
+        min={-500}
+        max={500}
+        onChange={(v) => update({ offsetX: v })}
+      />
+
+      <SliderControl
+        label="Offset Y"
+        value={layer.offsetY ?? 0}
+        min={-500}
+        max={500}
+        onChange={(v) => update({ offsetY: v })}
+      />
+
+      <SliderControl
         label="Rotation"
         value={layer.rotation ?? 0}
         min={-180}
