@@ -374,7 +374,7 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
               const screenY = frameY + device.screenInset.top * devScale;
               const screenW = frameW - (device.screenInset.left + device.screenInset.right) * devScale;
               const screenH = frameH - (device.screenInset.top + device.screenInset.bottom) * devScale;
-              const screenCr = device.cornerRadius * devScale * 0.85;
+              const screenCr = cr * 0.85;
 
               // Apply offset and rotation around the center of the device frame
               const rotationDeg = dl.rotation ?? 0;

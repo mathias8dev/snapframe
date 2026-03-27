@@ -204,7 +204,7 @@ function DeviceRenderer({
       <Group
         clipFunc={(ctx: Konva.Context) => {
           ctx.beginPath();
-          const scr = device.cornerRadius * scale * 0.85;
+          const scr = cr * 0.85;
           const sx = screenX;
           const sy = screenY;
           const sw = screenW;
