@@ -9,7 +9,6 @@ import {
   Package,
   Smartphone,
   Tablet,
-  Monitor,
   AlertTriangle,
   Info,
 } from "lucide-react";
@@ -25,44 +24,13 @@ import {
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
-// Platform / preset data
+// Store spec info
 // ---------------------------------------------------------------------------
 
-type Platform = "apple" | "google";
+type StorePlatform = "apple" | "google";
 type Orientation = "portrait" | "landscape";
 
-interface ExportPreset {
-  id: string;
-  label: string;
-  platform: Platform;
-  category: "phone" | "tablet" | "chromebook";
-  portraitWidth: number;
-  portraitHeight: number;
-  notes?: string;
-}
-
-const EXPORT_PRESETS: ExportPreset[] = [
-  // ── Apple App Store ─────────────────────────────────────────────────
-  // iPhone
-  { id: "apple-iphone-69", label: 'iPhone 6.9"', platform: "apple", category: "phone", portraitWidth: 1320, portraitHeight: 2868, notes: "iPhone 16 Pro Max / 15 Pro Max / 16 Plus / 15 Plus" },
-  { id: "apple-iphone-65", label: 'iPhone 6.5"', platform: "apple", category: "phone", portraitWidth: 1284, portraitHeight: 2778, notes: "iPhone 14 Plus / 13 Pro Max / 12 Pro Max / 11 Pro Max" },
-  { id: "apple-iphone-63", label: 'iPhone 6.3"', platform: "apple", category: "phone", portraitWidth: 1206, portraitHeight: 2622, notes: "iPhone 17 Pro / 16 Pro / 15 Pro / 15 / 14 Pro" },
-  { id: "apple-iphone-61", label: 'iPhone 6.1"', platform: "apple", category: "phone", portraitWidth: 1170, portraitHeight: 2532, notes: "iPhone 14 / 13 / 12 / SE" },
-  { id: "apple-iphone-55", label: 'iPhone 5.5"', platform: "apple", category: "phone", portraitWidth: 1242, portraitHeight: 2208, notes: "iPhone 8 Plus / 7 Plus / 6S Plus" },
-  // iPad
-  { id: "apple-ipad-13", label: 'iPad Pro 13"', platform: "apple", category: "tablet", portraitWidth: 2064, portraitHeight: 2752, notes: "iPad Pro M4/M5, iPad Air M3/M4" },
-  { id: "apple-ipad-129", label: 'iPad Pro 12.9"', platform: "apple", category: "tablet", portraitWidth: 2048, portraitHeight: 2732, notes: "iPad Pro 2nd–6th gen" },
-  { id: "apple-ipad-11", label: 'iPad 11"', platform: "apple", category: "tablet", portraitWidth: 1488, portraitHeight: 2266, notes: "iPad Pro 11\", Air, mini, 10th gen" },
-
-  // ── Google Play Store ───────────────────────────────────────────────
-  { id: "google-phone", label: "Phone", platform: "google", category: "phone", portraitWidth: 1080, portraitHeight: 1920, notes: "Recommended. Min 320px, max 3840px per side" },
-  { id: "google-phone-tall", label: "Phone (Tall 20:9)", platform: "google", category: "phone", portraitWidth: 1080, portraitHeight: 2400, notes: "Modern tall-screen phones" },
-  { id: "google-tablet-7", label: '7" Tablet', platform: "google", category: "tablet", portraitWidth: 1200, portraitHeight: 1920, notes: "Required if app targets tablets (min 4 screenshots)" },
-  { id: "google-tablet-10", label: '10" Tablet', platform: "google", category: "tablet", portraitWidth: 1600, portraitHeight: 2560, notes: "Required if app targets tablets (min 4 screenshots)" },
-  { id: "google-chromebook", label: "Chromebook", platform: "google", category: "chromebook", portraitWidth: 1080, portraitHeight: 1920, notes: "Min 4 screenshots if targeting Chromebook" },
-];
-
-const PLATFORM_INFO: Record<Platform, {
+const STORE_INFO: Record<StorePlatform, {
   name: string;
   formats: string[];
   maxFileSize: string;
@@ -88,15 +56,32 @@ const PLATFORM_INFO: Record<Platform, {
   },
 };
 
-// ---------------------------------------------------------------------------
-// Helper – dimension for orientation
-// ---------------------------------------------------------------------------
-
-function getDimensions(preset: ExportPreset, orientation: Orientation) {
-  return orientation === "portrait"
-    ? { width: preset.portraitWidth, height: preset.portraitHeight }
-    : { width: preset.portraitHeight, height: preset.portraitWidth };
+// Store-specific additional sizes the user may need for their listing
+interface StoreSize {
+  id: string;
+  label: string;
+  width: number;
+  height: number;
+  notes: string;
 }
+
+const APPLE_STORE_SIZES: StoreSize[] = [
+  { id: "apple-69", label: 'iPhone 6.9"', width: 1320, height: 2868, notes: "iPhone 16 Pro Max / 15 Pro Max" },
+  { id: "apple-65", label: 'iPhone 6.5"', width: 1284, height: 2778, notes: "iPhone 14 Plus / 13 Pro Max" },
+  { id: "apple-63", label: 'iPhone 6.3"', width: 1206, height: 2622, notes: "iPhone 16 Pro / 15 Pro" },
+  { id: "apple-61", label: 'iPhone 6.1"', width: 1170, height: 2532, notes: "iPhone 14 / 13 / SE" },
+  { id: "apple-55", label: 'iPhone 5.5"', width: 1242, height: 2208, notes: "iPhone 8 Plus / 7 Plus" },
+  { id: "apple-ipad-13", label: 'iPad Pro 13"', width: 2064, height: 2752, notes: "iPad Pro M4/M5, Air M3/M4" },
+  { id: "apple-ipad-129", label: 'iPad Pro 12.9"', width: 2048, height: 2732, notes: "iPad Pro 2nd–6th gen" },
+  { id: "apple-ipad-11", label: 'iPad 11"', width: 1488, height: 2266, notes: 'iPad Pro 11", Air, mini' },
+];
+
+const GOOGLE_STORE_SIZES: StoreSize[] = [
+  { id: "google-phone", label: "Phone (16:9)", width: 1080, height: 1920, notes: "Standard recommended" },
+  { id: "google-phone-tall", label: "Phone (20:9)", width: 1080, height: 2400, notes: "Modern tall-screen phones" },
+  { id: "google-tablet-7", label: '7" Tablet', width: 1200, height: 1920, notes: "Min 4 screenshots if targeting tablets" },
+  { id: "google-tablet-10", label: '10" Tablet', width: 1600, height: 2560, notes: "Min 4 screenshots if targeting tablets" },
+];
 
 // ---------------------------------------------------------------------------
 // Preview thumbnail
@@ -163,18 +148,6 @@ function ExportPreviewSlide({
 }
 
 // ---------------------------------------------------------------------------
-// Category icon helper
-// ---------------------------------------------------------------------------
-
-function CategoryIcon({ category }: { category: ExportPreset["category"] }) {
-  switch (category) {
-    case "phone": return <Smartphone size={14} />;
-    case "tablet": return <Tablet size={14} />;
-    case "chromebook": return <Monitor size={14} />;
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Main modal
 // ---------------------------------------------------------------------------
 
@@ -187,39 +160,51 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
   const project = useEditorStore((s) => s.project);
   const activeSlideId = useEditorStore((s) => s.activeSlideId);
 
-  const [platform, setPlatform] = useState<Platform>("apple");
-  const [presetId, setPresetId] = useState("apple-iphone-69");
+  // Derive platform from the project's device target
+  const targetDevice = project ? DEVICES[project.deviceTarget] : null;
+  const storePlatform: StorePlatform = targetDevice?.category === "android" ? "google" : "apple";
+  const storeInfo = STORE_INFO[storePlatform];
+  const storeSizes = storePlatform === "apple" ? APPLE_STORE_SIZES : GOOGLE_STORE_SIZES;
+
+  // "device" = use the project's device native dimensions, or a store size id
+  const [sizeMode, setSizeMode] = useState<"device" | string>("device");
   const [orientation, setOrientation] = useState<Orientation>("portrait");
   const [format, setFormat] = useState<"png" | "jpeg">("png");
   const [resolution, setResolution] = useState<1 | 2 | 3>(1);
   const [scope, setScope] = useState<"current" | "all">("current");
   const [exporting, setExporting] = useState(false);
 
-  const platformPresets = useMemo(
-    () => EXPORT_PRESETS.filter((p) => p.platform === platform),
-    [platform]
-  );
-
-  const selectedPreset = EXPORT_PRESETS.find((p) => p.id === presetId) ?? EXPORT_PRESETS[0];
-  const { width: exportW, height: exportH } = getDimensions(selectedPreset, orientation);
-  const info = PLATFORM_INFO[platform];
+  // Compute export dimensions
+  const { exportW, exportH } = useMemo(() => {
+    let w: number, h: number;
+    if (sizeMode === "device" && targetDevice) {
+      w = targetDevice.exportWidth;
+      h = targetDevice.exportHeight;
+    } else {
+      const storeSize = storeSizes.find((s) => s.id === sizeMode);
+      if (storeSize) {
+        w = storeSize.width;
+        h = storeSize.height;
+      } else if (targetDevice) {
+        w = targetDevice.exportWidth;
+        h = targetDevice.exportHeight;
+      } else {
+        w = 1080;
+        h = 1920;
+      }
+    }
+    return orientation === "portrait"
+      ? { exportW: w, exportH: h }
+      : { exportW: h, exportH: w };
+  }, [sizeMode, targetDevice, storeSizes, orientation]);
 
   // Format warnings
   const formatWarning = useMemo(() => {
-    if (format === "jpeg" && platform === "google") {
+    if (format === "jpeg" && storePlatform === "google") {
       return "Google Play requires 24-bit PNG or JPEG with no transparency.";
     }
     return null;
-  }, [format, platform]);
-
-  // Switch preset when platform changes
-  const handlePlatformChange = useCallback((p: Platform) => {
-    setPlatform(p);
-    const first = EXPORT_PRESETS.find((pr) => pr.platform === p);
-    if (first) setPresetId(first.id);
-    // Google Play doesn't benefit from multiplied resolution the same way
-    if (p === "google") setResolution(1);
-  }, []);
+  }, [format, storePlatform]);
 
   // ── Export handler ──────────────────────────────────────────────────
 
@@ -295,7 +280,6 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
           if (!layer.visible) continue;
 
           switch (layer.type) {
-            // ── Background ──────────────────────────────────────
             case "background": {
               const bg = layer as BackgroundLayer;
               if (bg.kind === "solid") {
@@ -321,7 +305,6 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
               break;
             }
 
-            // ── Title ───────────────────────────────────────────
             case "title": {
               const tl = layer as TitleLayer;
               const scaledFontSize = (tl.fontSize / REF_W) * exportW;
@@ -346,7 +329,6 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
               break;
             }
 
-            // ── Device frame ────────────────────────────────────
             case "device": {
               const dl = layer as DeviceLayer;
               const device = DEVICES[dl.deviceId];
@@ -376,7 +358,6 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
               const screenH = frameH - (device.screenInset.top + device.screenInset.bottom) * devScale;
               const screenCr = cr * 0.85;
 
-              // Apply offset and rotation around the center of the device frame
               const rotationDeg = dl.rotation ?? 0;
               const oX = (dl.offsetX ?? 0) * scaleX;
               const oY = (dl.offsetY ?? 0) * scaleY;
@@ -388,7 +369,6 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
               ctx.rotate((rotationDeg * Math.PI) / 180);
               ctx.translate(-pivotX, -pivotY);
 
-              // Draw frame
               if (dl.frameVisible) {
                 ctx.save();
                 ctx.globalAlpha = dl.frameOpacity;
@@ -401,25 +381,17 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
                 ctx.restore();
               }
 
-              // Draw screen area (clipped)
               ctx.save();
               drawRoundedRect(ctx, screenX, screenY, screenW, screenH, screenCr);
               ctx.clip();
-
-              // Screen background
               ctx.fillStyle = "#000";
               ctx.fillRect(screenX, screenY, screenW, screenH);
-
-              // Screenshot image
               if (dl.screenshotUrl) {
                 const ssImg = imageCache.get(dl.screenshotUrl);
-                if (ssImg) {
-                  ctx.drawImage(ssImg, screenX, screenY, screenW, screenH);
-                }
+                if (ssImg) ctx.drawImage(ssImg, screenX, screenY, screenW, screenH);
               }
               ctx.restore();
 
-              // Dynamic Island
               if (device.dynamicIsland && dl.frameVisible) {
                 const diW = 80 * devScale;
                 const diH = 24 * devScale;
@@ -430,7 +402,6 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
                 ctx.fill();
               }
 
-              // Notch
               if (device.notch && !device.dynamicIsland && dl.frameVisible) {
                 const nW = 120 * devScale;
                 const nH = 28 * devScale;
@@ -449,16 +420,14 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
                 ctx.fill();
               }
 
-              ctx.restore(); // restore rotation
+              ctx.restore();
               break;
             }
 
-            // ── Image layer ─────────────────────────────────────
             case "image": {
               const il = layer as ImageLayer;
               const img = imageCache.get(il.url);
               if (!img) break;
-
               ctx.save();
               ctx.globalAlpha = il.opacity;
               const imgW = (il.width || REF_W * 0.5) * scaleX;
@@ -509,18 +478,6 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
 
   if (!isOpen || !project) return null;
 
-  // Group presets by category for display
-  const grouped = platformPresets.reduce<Record<string, ExportPreset[]>>((acc, p) => {
-    (acc[p.category] ??= []).push(p);
-    return acc;
-  }, {});
-
-  const categoryLabels: Record<string, string> = {
-    phone: "Phone",
-    tablet: "Tablet",
-    chromebook: "Chromebook",
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="bg-surface border border-border rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -536,90 +493,88 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
         </div>
 
         <div className="p-4 flex flex-col gap-5">
-          {/* ── Platform toggle ──────────────────────────────────── */}
-          <div>
-            <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
-              Platform
-            </h3>
-            <div className="flex gap-1">
-              {(["apple", "google"] as const).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => handlePlatformChange(p)}
-                  className={cn(
-                    "flex-1 py-2 rounded-md text-xs font-medium transition-colors",
-                    platform === p
-                      ? "bg-accent text-white"
-                      : "bg-background text-muted hover:text-foreground"
-                  )}
-                >
-                  {PLATFORM_INFO[p].name}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* ── Platform info banner ─────────────────────────────── */}
+          {/* ── Store info (auto-detected) ──────────────────────── */}
           <div className="flex items-start gap-2 text-xs text-muted bg-background rounded-lg px-3 py-2.5 border border-border">
             <Info size={14} className="mt-0.5 flex-shrink-0 text-accent" />
             <div className="space-y-1">
               <div>
-                <span className="text-foreground font-medium">Formats:</span>{" "}
-                {info.formats.join(", ")} &middot;{" "}
-                <span className="text-foreground font-medium">Max size:</span>{" "}
-                {info.maxFileSize} &middot;{" "}
-                <span className="text-foreground font-medium">Screenshots:</span>{" "}
-                {info.minScreenshots}–{info.maxScreenshots} per device
+                <span className="text-foreground font-medium">{storeInfo.name}</span>{" "}
+                (detected from {targetDevice?.name ?? "project target"})
               </div>
-              <div className="text-muted">{info.notes}</div>
+              <div>
+                <span className="text-foreground font-medium">Formats:</span>{" "}
+                {storeInfo.formats.join(", ")} &middot;{" "}
+                <span className="text-foreground font-medium">Max size:</span>{" "}
+                {storeInfo.maxFileSize} &middot;{" "}
+                <span className="text-foreground font-medium">Screenshots:</span>{" "}
+                {storeInfo.minScreenshots}–{storeInfo.maxScreenshots} per device
+              </div>
+              <div className="text-muted">{storeInfo.notes}</div>
             </div>
           </div>
 
-          {/* ── Device preset ────────────────────────────────────── */}
+          {/* ── Export size ──────────────────────────────────────── */}
           <div>
             <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
-              Device Size
+              Export Size
             </h3>
-            <div className="space-y-3">
-              {Object.entries(grouped).map(([cat, presets]) => (
-                <div key={cat}>
-                  <div className="text-[10px] uppercase tracking-widest text-muted/60 mb-1.5">
-                    {categoryLabels[cat] ?? cat}
+
+            {/* Device native option */}
+            {targetDevice && (
+              <button
+                onClick={() => setSizeMode("device")}
+                className={cn(
+                  "w-full flex items-start gap-2 px-3 py-2.5 rounded-lg text-left transition-colors border mb-2",
+                  sizeMode === "device"
+                    ? "bg-accent/10 border-accent text-foreground"
+                    : "bg-background border-border text-muted hover:text-foreground hover:border-accent/30"
+                )}
+              >
+                <Smartphone size={14} className="mt-0.5" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium">{targetDevice.name}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent/20 text-accent">Recommended</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {presets.map((p) => {
-                      const dim = getDimensions(p, orientation);
-                      const isSelected = presetId === p.id;
-                      return (
-                        <button
-                          key={p.id}
-                          onClick={() => setPresetId(p.id)}
-                          className={cn(
-                            "flex items-start gap-2 px-3 py-2 rounded-lg text-left transition-colors border",
-                            isSelected
-                              ? "bg-accent/10 border-accent text-foreground"
-                              : "bg-background border-border text-muted hover:text-foreground hover:border-accent/30"
-                          )}
-                        >
-                          <CategoryIcon category={p.category} />
-                          <div className="min-w-0">
-                            <div className="text-xs font-medium truncate">{p.label}</div>
-                            <div className="text-[10px] text-muted">
-                              {dim.width} × {dim.height}
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
+                  <div className="text-[10px] text-muted">
+                    {orientation === "portrait"
+                      ? `${targetDevice.exportWidth} × ${targetDevice.exportHeight}`
+                      : `${targetDevice.exportHeight} × ${targetDevice.exportWidth}`}
+                    px — native device resolution
                   </div>
                 </div>
-              ))}
-            </div>
-            {selectedPreset.notes && (
-              <p className="mt-2 text-[10px] text-muted leading-relaxed">
-                {selectedPreset.notes}
-              </p>
+              </button>
             )}
+
+            {/* Store-specific sizes */}
+            <div className="text-[10px] uppercase tracking-widest text-muted/60 mb-1.5 mt-3">
+              {storePlatform === "apple" ? "App Store" : "Play Store"} sizes
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              {storeSizes.map((s) => {
+                const isSelected = sizeMode === s.id;
+                const w = orientation === "portrait" ? s.width : s.height;
+                const h = orientation === "portrait" ? s.height : s.width;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => setSizeMode(s.id)}
+                    className={cn(
+                      "flex items-start gap-2 px-3 py-2 rounded-lg text-left transition-colors border",
+                      isSelected
+                        ? "bg-accent/10 border-accent text-foreground"
+                        : "bg-background border-border text-muted hover:text-foreground hover:border-accent/30"
+                    )}
+                  >
+                    <Tablet size={14} className="mt-0.5" />
+                    <div className="min-w-0">
+                      <div className="text-xs font-medium truncate">{s.label}</div>
+                      <div className="text-[10px] text-muted">{w} × {h}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* ── Orientation ──────────────────────────────────────── */}
