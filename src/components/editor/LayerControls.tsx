@@ -424,8 +424,16 @@ function DeviceControls({
         label="Corner Rounding"
         value={layer.cornerRounding === "auto" ? 0 : layer.cornerRounding}
         min={0}
-        max={60}
+        max={200}
         onChange={(v) => update({ cornerRounding: v === 0 ? "auto" : v })}
+      />
+
+      <SliderControl
+        label="Rotation"
+        value={layer.rotation ?? 0}
+        min={-180}
+        max={180}
+        onChange={(v) => update({ rotation: v })}
       />
 
       <SliderControl
@@ -440,7 +448,7 @@ function DeviceControls({
         label="Padding"
         value={layer.padding}
         min={0}
-        max={100}
+        max={300}
         onChange={(v) => update({ padding: v })}
       />
     </div>

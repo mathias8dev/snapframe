@@ -38,6 +38,12 @@ export default function EditorPage() {
   useEffect(() => {
     if (loaded) return;
 
+    // If the store already has this project loaded (e.g. from template page), skip
+    if (project?.id === id) {
+      setLoaded(true);
+      return;
+    }
+
     if (id === "new") {
       const p = createProject("Untitled Project", "iphone15pro");
       router.replace(`/editor/${p.id}`);
@@ -54,7 +60,7 @@ export default function EditorPage() {
       router.replace(`/editor/${p.id}`);
     }
     setLoaded(true);
-  }, [id, loaded, loadProject, createProject, router]);
+  }, [id, loaded, project, loadProject, createProject, router]);
 
   // Persist on change
   useEffect(() => {

@@ -8,7 +8,7 @@ import {
   createProjectFromTemplate,
   TEMPLATE_CATEGORIES,
 } from "@/lib/templates";
-import { persistProject } from "@/lib/store";
+import useEditorStore, { persistProjectSync } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 export default function TemplatesPage() {
@@ -25,7 +25,8 @@ export default function TemplatesPage() {
     const template = templates.find((t) => t.id === templateId);
     if (!template) return;
     const project = createProjectFromTemplate(template);
-    persistProject(project);
+    persistProjectSync(project);
+    useEditorStore.getState().loadProject(project);
     router.push(`/editor/${project.id}`);
   };
 

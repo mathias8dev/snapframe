@@ -9,11 +9,11 @@ import {
   FolderOpen,
   Clock,
 } from "lucide-react";
-import {
+import useEditorStore, {
   getStoredProjects,
   deleteStoredProject,
   createNewProject,
-  persistProject,
+  persistProjectSync,
 } from "@/lib/store";
 import { Project } from "@/lib/types";
 
@@ -27,7 +27,8 @@ export default function ProjectsPage() {
 
   const handleNewProject = () => {
     const project = createNewProject("Untitled Project", "iphone15pro");
-    persistProject(project);
+    persistProjectSync(project);
+    useEditorStore.getState().loadProject(project);
     router.push(`/editor/${project.id}`);
   };
 

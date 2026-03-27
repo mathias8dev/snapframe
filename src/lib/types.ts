@@ -64,6 +64,7 @@ export interface DeviceLayer extends BaseLayer {
   frameVisible: boolean;
   frameOpacity: number;
   padding: number;
+  rotation: number;
   screenshotUrl: string | null;
 }
 

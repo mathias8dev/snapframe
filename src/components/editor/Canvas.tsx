@@ -160,8 +160,20 @@ function DeviceRenderer({
   const screenW = frameW - (device.screenInset.left + device.screenInset.right) * scale;
   const screenH = frameH - (device.screenInset.top + device.screenInset.bottom) * scale;
 
+  // Rotation pivot: center of the device frame
+  const pivotX = frameX + frameW / 2;
+  const pivotY = frameY + frameH / 2;
+
   return (
-    <Group onClick={onSelect} onTap={onSelect}>
+    <Group
+      onClick={onSelect}
+      onTap={onSelect}
+      rotation={layer.rotation ?? 0}
+      offsetX={pivotX}
+      offsetY={pivotY}
+      x={pivotX}
+      y={pivotY}
+    >
       {/* Device frame */}
       {layer.frameVisible && (
         <Rect
@@ -328,6 +340,9 @@ export default function Canvas() {
     <div
       ref={containerRef}
       className="flex-1 flex items-center justify-center bg-canvas overflow-hidden"
+      onClick={(e) => {
+        if (e.target === containerRef.current) setActiveLayer(null);
+      }}
     >
       <div
         className="rounded-lg shadow-2xl"

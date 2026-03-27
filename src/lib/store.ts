@@ -91,6 +91,7 @@ function createDefaultSlide(): Slide {
         frameVisible: true,
         frameOpacity: 1,
         padding: 40,
+        rotation: 0,
         screenshotUrl: null,
       } as DeviceLayer,
     ],
@@ -339,15 +340,19 @@ let saveTimeout: NodeJS.Timeout | null = null;
 export function persistProject(project: Project) {
   if (saveTimeout) clearTimeout(saveTimeout);
   saveTimeout = setTimeout(() => {
-    const projects = getStoredProjects();
-    const idx = projects.findIndex((p) => p.id === project.id);
-    if (idx >= 0) {
-      projects[idx] = project;
-    } else {
-      projects.push(project);
-    }
-    localStorage.setItem("snapframe_projects", JSON.stringify(projects));
+    persistProjectSync(project);
   }, 500);
+}
+
+export function persistProjectSync(project: Project) {
+  const projects = getStoredProjects();
+  const idx = projects.findIndex((p) => p.id === project.id);
+  if (idx >= 0) {
+    projects[idx] = project;
+  } else {
+    projects.push(project);
+  }
+  localStorage.setItem("snapframe_projects", JSON.stringify(projects));
 }
 
 export function getStoredProjects(): Project[] {
