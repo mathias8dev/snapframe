@@ -305,9 +305,14 @@ function ImageRenderer({
   );
 }
 
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 3;
+const ZOOM_STEP = 0.1;
+
 export default function Canvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 420, height: 840 });
+  const [zoom, setZoom] = useState(1);
   const project = useEditorStore((s) => s.project);
   const activeSlideId = useEditorStore((s) => s.activeSlideId);
   const activeLayerId = useEditorStore((s) => s.activeLayerId);
@@ -337,6 +342,24 @@ export default function Canvas() {
     return () => window.removeEventListener("resize", updateDimensions);
   }, [updateDimensions]);
 
+  // Ctrl + wheel zoom
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      setZoom((prev) => {
+        const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+        return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round((prev + delta) * 100) / 100));
+      });
+    };
+
+    container.addEventListener("wheel", handleWheel, { passive: false });
+    return () => container.removeEventListener("wheel", handleWheel);
+  }, []);
+
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (e.target === e.currentTarget || e.target.getClassName() === "Rect") {
       // Check if it's the stage background or canvas background
@@ -350,14 +373,19 @@ export default function Canvas() {
   return (
     <div
       ref={containerRef}
-      className="flex-1 flex items-center justify-center bg-canvas overflow-hidden"
+      className="flex-1 flex items-center justify-center bg-canvas overflow-hidden relative"
       onClick={(e) => {
         if (e.target === containerRef.current) setActiveLayer(null);
       }}
     >
       <div
         className="rounded-lg shadow-2xl"
-        style={{ width: dimensions.width, height: dimensions.height }}
+        style={{
+          width: dimensions.width,
+          height: dimensions.height,
+          transform: `scale(${zoom})`,
+          transformOrigin: "center center",
+        }}
       >
         <Stage
           width={dimensions.width}
@@ -426,6 +454,19 @@ export default function Canvas() {
           </Layer>
         </Stage>
       </div>
+
+      {/* Zoom indicator */}
+      {zoom !== 1 && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-surface/90 border border-border rounded-full px-3 py-1 text-xs text-muted">
+          <span>{Math.round(zoom * 100)}%</span>
+          <button
+            onClick={() => setZoom(1)}
+            className="text-accent hover:text-foreground transition-colors"
+          >
+            Reset
+          </button>
+        </div>
+      )}
     </div>
   );
 }
