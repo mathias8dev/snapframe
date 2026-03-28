@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { Stage, Layer, Rect, Text } from "react-konva";
+import { Stage, Layer, Rect } from "react-konva";
 import {
   X,
   Download,
@@ -23,7 +23,6 @@ import {
   FRAME_FILL,
   FRAME_STROKE,
   SCREEN_BG,
-  CANVAS_BG,
   DYNAMIC_ISLAND,
   NOTCH,
 } from "@/lib/deviceGeometry";
@@ -34,6 +33,7 @@ import {
   ImageLayer,
   Slide,
 } from "@/lib/types";
+import { SlideLayerRenderer, CANVAS_BG } from "@/components/editor/SlidePreview";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -96,64 +96,16 @@ const GOOGLE_STORE_SIZES: StoreSize[] = [
   { id: "google-tablet-10", label: '10" Tablet', width: 1600, height: 2560, notes: "Min 4 screenshots if targeting tablets" },
 ];
 
-// ---------------------------------------------------------------------------
-// Preview thumbnail
-// ---------------------------------------------------------------------------
-
-function ExportPreviewSlide({
-  slide,
-  width,
-  height,
-}: {
-  slide: Slide;
-  width: number;
-  height: number;
-}) {
+function ExportPreviewSlide({ slide, width, height }: { slide: Slide; width: number; height: number }) {
   const thumbW = 120;
   const thumbH = (height / width) * thumbW;
 
-  const bgLayer = slide.layers.find((l) => l.type === "background") as BackgroundLayer | undefined;
-  const titleLayer = slide.layers.find((l) => l.type === "title") as TitleLayer | undefined;
-
   return (
     <div className="rounded-lg overflow-hidden border border-border flex-shrink-0">
-      <Stage width={thumbW} height={Math.min(thumbH, 220)} listening={false}>
+      <Stage width={thumbW} height={thumbH} listening={false}>
         <Layer>
-          {bgLayer && bgLayer.kind === "gradient" ? (
-            <Rect
-              width={thumbW}
-              height={thumbH}
-              fillLinearGradientStartPoint={{ x: 0, y: 0 }}
-              fillLinearGradientEndPoint={{ x: thumbW, y: thumbH }}
-              fillLinearGradientColorStops={[0, bgLayer.color1, 1, bgLayer.color2]}
-            />
-          ) : bgLayer ? (
-            <Rect width={thumbW} height={thumbH} fill={bgLayer.color1} />
-          ) : (
-            <Rect width={thumbW} height={thumbH} fill="#27272a" />
-          )}
-          {titleLayer && titleLayer.visible && (
-            <Text
-              text={titleLayer.text}
-              x={6}
-              y={titleLayer.position === "top" ? 16 : Math.min(thumbH, 220) - 28}
-              width={thumbW - 12}
-              fontSize={8}
-              fontFamily={titleLayer.fontFamily}
-              fill={titleLayer.color}
-              align={titleLayer.align}
-            />
-          )}
-          <Rect
-            x={thumbW * 0.2}
-            y={Math.min(thumbH, 220) * 0.22}
-            width={thumbW * 0.6}
-            height={Math.min(thumbH, 220) * 0.6}
-            cornerRadius={4}
-            fill="#1a1a1a"
-            stroke="#333"
-            strokeWidth={0.5}
-          />
+          <Rect width={thumbW} height={thumbH} fill={CANVAS_BG} />
+          <SlideLayerRenderer layers={slide.layers} width={thumbW} height={thumbH} />
         </Layer>
       </Stage>
     </div>
