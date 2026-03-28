@@ -92,8 +92,17 @@ export interface DeviceConfig {
   dynamicIsland: boolean;
   notch: boolean;
   screenInset: { top: number; bottom: number; left: number; right: number };
+  buttons: DeviceButton[];
   framePath: string;
   screenPath: string;
+}
+
+export interface DeviceButton {
+  side: "left" | "right" | "top";
+  /** Offset from the start of that side as a fraction (0–1) of the frame dimension */
+  offsetPercent: number;
+  /** Length of the button as a fraction (0–1) of the frame dimension */
+  lengthPercent: number;
 }
 
 export type LayerType = Layer["type"];

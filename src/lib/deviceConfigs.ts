@@ -1,4 +1,53 @@
-import { DeviceConfig } from "./types";
+import { DeviceConfig, DeviceButton } from "./types";
+
+// ── Shared button layouts ──────────────────────────────────────────────────
+
+// iPhone with side button (iPhone X and later)
+const IPHONE_MODERN_BUTTONS: DeviceButton[] = [
+  // Power (right side)
+  { side: "right", offsetPercent: 0.25, lengthPercent: 0.06 },
+  // Volume up (left side)
+  { side: "left", offsetPercent: 0.22, lengthPercent: 0.045 },
+  // Volume down (left side)
+  { side: "left", offsetPercent: 0.29, lengthPercent: 0.045 },
+  // Mute switch (left side, shorter)
+  { side: "left", offsetPercent: 0.16, lengthPercent: 0.025 },
+];
+
+// iPhone SE (home button era) - same sides but different positions
+const IPHONE_SE_BUTTONS: DeviceButton[] = [
+  { side: "right", offsetPercent: 0.08, lengthPercent: 0.05 },
+  { side: "left", offsetPercent: 0.14, lengthPercent: 0.045 },
+  { side: "left", offsetPercent: 0.21, lengthPercent: 0.045 },
+  { side: "left", offsetPercent: 0.08, lengthPercent: 0.025 },
+];
+
+// iPad - power on top, volume on right
+const IPAD_BUTTONS: DeviceButton[] = [
+  { side: "top", offsetPercent: 0.92, lengthPercent: 0.04 },
+  { side: "right", offsetPercent: 0.07, lengthPercent: 0.04 },
+  { side: "right", offsetPercent: 0.13, lengthPercent: 0.04 },
+];
+
+// Android - power + volume on right side
+const ANDROID_BUTTONS: DeviceButton[] = [
+  { side: "right", offsetPercent: 0.27, lengthPercent: 0.05 },
+  { side: "right", offsetPercent: 0.18, lengthPercent: 0.06 },
+];
+
+// Samsung - power right, volume left
+const SAMSUNG_BUTTONS: DeviceButton[] = [
+  { side: "right", offsetPercent: 0.27, lengthPercent: 0.05 },
+  { side: "left", offsetPercent: 0.2, lengthPercent: 0.06 },
+];
+
+// Pixel - power right, volume right (stacked)
+const PIXEL_BUTTONS: DeviceButton[] = [
+  { side: "right", offsetPercent: 0.28, lengthPercent: 0.04 },
+  { side: "right", offsetPercent: 0.18, lengthPercent: 0.06 },
+];
+
+// ── Device configs ─────────────────────────────────────────────────────────
 
 export const DEVICES: Record<string, DeviceConfig> = {
   // ── iOS Generic ───────────────────────────────────────────────────
@@ -14,6 +63,7 @@ export const DEVICES: Record<string, DeviceConfig> = {
     dynamicIsland: true,
     notch: false,
     screenInset: { top: 68, bottom: 34, left: 20, right: 20 },
+    buttons: IPHONE_MODERN_BUTTONS,
     framePath: "",
     screenPath: "",
   },
@@ -31,6 +81,7 @@ export const DEVICES: Record<string, DeviceConfig> = {
     dynamicIsland: true,
     notch: false,
     screenInset: { top: 71, bottom: 34, left: 21, right: 21 },
+    buttons: IPHONE_MODERN_BUTTONS,
     framePath: "",
     screenPath: "",
   },
@@ -46,6 +97,7 @@ export const DEVICES: Record<string, DeviceConfig> = {
     dynamicIsland: true,
     notch: false,
     screenInset: { top: 68, bottom: 34, left: 20, right: 20 },
+    buttons: IPHONE_MODERN_BUTTONS,
     framePath: "",
     screenPath: "",
   },
@@ -61,6 +113,7 @@ export const DEVICES: Record<string, DeviceConfig> = {
     dynamicIsland: true,
     notch: false,
     screenInset: { top: 71, bottom: 34, left: 21, right: 21 },
+    buttons: IPHONE_MODERN_BUTTONS,
     framePath: "",
     screenPath: "",
   },
@@ -76,6 +129,7 @@ export const DEVICES: Record<string, DeviceConfig> = {
     dynamicIsland: false,
     notch: true,
     screenInset: { top: 68, bottom: 34, left: 19, right: 19 },
+    buttons: IPHONE_MODERN_BUTTONS,
     framePath: "",
     screenPath: "",
   },
@@ -91,6 +145,7 @@ export const DEVICES: Record<string, DeviceConfig> = {
     dynamicIsland: false,
     notch: true,
     screenInset: { top: 64, bottom: 30, left: 18, right: 18 },
+    buttons: IPHONE_MODERN_BUTTONS,
     framePath: "",
     screenPath: "",
   },
@@ -106,6 +161,7 @@ export const DEVICES: Record<string, DeviceConfig> = {
     dynamicIsland: false,
     notch: false,
     screenInset: { top: 40, bottom: 40, left: 16, right: 16 },
+    buttons: IPHONE_SE_BUTTONS,
     framePath: "",
     screenPath: "",
   },
@@ -123,6 +179,7 @@ export const DEVICES: Record<string, DeviceConfig> = {
     dynamicIsland: false,
     notch: false,
     screenInset: { top: 40, bottom: 40, left: 40, right: 40 },
+    buttons: IPAD_BUTTONS,
     framePath: "",
     screenPath: "",
   },
@@ -138,6 +195,7 @@ export const DEVICES: Record<string, DeviceConfig> = {
     dynamicIsland: false,
     notch: false,
     screenInset: { top: 36, bottom: 36, left: 36, right: 36 },
+    buttons: IPAD_BUTTONS,
     framePath: "",
     screenPath: "",
   },
@@ -153,6 +211,7 @@ export const DEVICES: Record<string, DeviceConfig> = {
     dynamicIsland: false,
     notch: false,
     screenInset: { top: 36, bottom: 36, left: 36, right: 36 },
+    buttons: IPAD_BUTTONS,
     framePath: "",
     screenPath: "",
   },
@@ -170,6 +229,7 @@ export const DEVICES: Record<string, DeviceConfig> = {
     dynamicIsland: false,
     notch: false,
     screenInset: { top: 30, bottom: 30, left: 18, right: 18 },
+    buttons: ANDROID_BUTTONS,
     framePath: "",
     screenPath: "",
   },
@@ -187,6 +247,7 @@ export const DEVICES: Record<string, DeviceConfig> = {
     dynamicIsland: false,
     notch: false,
     screenInset: { top: 36, bottom: 36, left: 20, right: 20 },
+    buttons: PIXEL_BUTTONS,
     framePath: "",
     screenPath: "",
   },
@@ -202,6 +263,7 @@ export const DEVICES: Record<string, DeviceConfig> = {
     dynamicIsland: false,
     notch: false,
     screenInset: { top: 32, bottom: 32, left: 18, right: 18 },
+    buttons: PIXEL_BUTTONS,
     framePath: "",
     screenPath: "",
   },
@@ -217,6 +279,7 @@ export const DEVICES: Record<string, DeviceConfig> = {
     dynamicIsland: false,
     notch: false,
     screenInset: { top: 34, bottom: 34, left: 20, right: 20 },
+    buttons: SAMSUNG_BUTTONS,
     framePath: "",
     screenPath: "",
   },
@@ -232,6 +295,7 @@ export const DEVICES: Record<string, DeviceConfig> = {
     dynamicIsland: false,
     notch: false,
     screenInset: { top: 30, bottom: 30, left: 18, right: 18 },
+    buttons: SAMSUNG_BUTTONS,
     framePath: "",
     screenPath: "",
   },
@@ -247,6 +311,7 @@ export const DEVICES: Record<string, DeviceConfig> = {
     dynamicIsland: false,
     notch: false,
     screenInset: { top: 36, bottom: 36, left: 20, right: 20 },
+    buttons: ANDROID_BUTTONS,
     framePath: "",
     screenPath: "",
   },

@@ -420,6 +420,36 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
                 ctx.fill();
               }
 
+              // Hardware buttons
+              if (dl.frameVisible && device.buttons) {
+                for (const btn of device.buttons) {
+                  const thickness = 3 * devScale;
+                  const btnRadius = thickness / 2;
+                  let bx: number, by: number, bw: number, bh: number;
+
+                  if (btn.side === "right") {
+                    bx = frameX + frameW;
+                    by = frameY + btn.offsetPercent * frameH;
+                    bw = thickness;
+                    bh = btn.lengthPercent * frameH;
+                  } else if (btn.side === "left") {
+                    bx = frameX - thickness;
+                    by = frameY + btn.offsetPercent * frameH;
+                    bw = thickness;
+                    bh = btn.lengthPercent * frameH;
+                  } else {
+                    bx = frameX + btn.offsetPercent * frameW;
+                    by = frameY - thickness;
+                    bw = btn.lengthPercent * frameW;
+                    bh = thickness;
+                  }
+
+                  drawRoundedRect(ctx, bx, by, bw, bh, btnRadius);
+                  ctx.fillStyle = "#1a1a1a";
+                  ctx.fill();
+                }
+              }
+
               ctx.restore();
               break;
             }

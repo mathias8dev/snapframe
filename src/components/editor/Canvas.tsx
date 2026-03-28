@@ -259,6 +259,44 @@ function DeviceRenderer({
           fill="#1a1a1a"
         />
       )}
+
+      {/* Hardware buttons */}
+      {layer.frameVisible &&
+        device.buttons?.map((btn, i) => {
+          const thickness = 3 * scale;
+          const btnRadius = thickness / 2;
+          let bx: number, by: number, bw: number, bh: number;
+
+          if (btn.side === "right") {
+            bx = frameX + frameW;
+            by = frameY + btn.offsetPercent * frameH;
+            bw = thickness;
+            bh = btn.lengthPercent * frameH;
+          } else if (btn.side === "left") {
+            bx = frameX - thickness;
+            by = frameY + btn.offsetPercent * frameH;
+            bw = thickness;
+            bh = btn.lengthPercent * frameH;
+          } else {
+            bx = frameX + btn.offsetPercent * frameW;
+            by = frameY - thickness;
+            bw = btn.lengthPercent * frameW;
+            bh = thickness;
+          }
+
+          return (
+            <Rect
+              key={i}
+              x={bx}
+              y={by}
+              width={bw}
+              height={bh}
+              cornerRadius={btnRadius}
+              fill="#1a1a1a"
+              opacity={layer.frameOpacity}
+            />
+          );
+        })}
     </Group>
   );
 }
