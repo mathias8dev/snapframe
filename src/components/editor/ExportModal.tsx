@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import useEditorStore from "@/lib/store";
 import { DEVICES } from "@/lib/deviceConfigs";
+import { isIdbUrl, loadImageAsObjectURL } from "@/lib/imageStore";
 import {
   computeDeviceLayout,
   computeButtonRect,
@@ -233,14 +234,21 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
       const scaleX = exportW / REF_W;
       const scaleY = exportH / REF_H;
 
-      const loadImage = (url: string): Promise<HTMLImageElement> =>
-        new Promise((resolve, reject) => {
+      const loadImage = async (url: string): Promise<HTMLImageElement> => {
+        let src = url;
+        if (isIdbUrl(url)) {
+          const objectUrl = await loadImageAsObjectURL(url);
+          if (!objectUrl) throw new Error(`Image not found: ${url}`);
+          src = objectUrl;
+        }
+        return new Promise((resolve, reject) => {
           const img = new window.Image();
           img.crossOrigin = "anonymous";
           img.onload = () => resolve(img);
           img.onerror = reject;
-          img.src = url;
+          img.src = src;
         });
+      };
 
       const drawRoundedRect = (
         ctx: CanvasRenderingContext2D,

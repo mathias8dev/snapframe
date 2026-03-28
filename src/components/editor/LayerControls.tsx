@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { HexColorPicker } from "react-colorful";
 import {
   Upload,
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import useEditorStore from "@/lib/store";
 import { DEVICE_LIST } from "@/lib/deviceConfigs";
+import { storeImageFile, isIdbUrl, loadImageAsObjectURL } from "@/lib/imageStore";
 import {
   BackgroundLayer,
   TitleLayer,
@@ -30,6 +31,25 @@ const FONTS = [
   "Space Grotesk",
   "DM Sans",
 ];
+
+/** Renders an image preview that handles both idb:// and regular URLs. */
+function IdbImagePreview({ url, alt, className }: { url: string; alt: string; className?: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    let revoke: string | null = null;
+    if (isIdbUrl(url)) {
+      loadImageAsObjectURL(url).then((objectUrl) => {
+        if (objectUrl) { revoke = objectUrl; setSrc(objectUrl); }
+      });
+    } else {
+      setSrc(url);
+    }
+    return () => { if (revoke) URL.revokeObjectURL(revoke); };
+  }, [url]);
+
+  if (!src) return null;
+  return <img src={src} alt={alt} className={className} />;
+}
 
 const PROJECT_COLORS = [
   "#7c3aed", "#2563eb", "#dc2626", "#059669", "#d97706",
@@ -138,12 +158,11 @@ function BackgroundControls({
   const update = (patch: Partial<BackgroundLayer>) =>
     updateLayer(slideId, layer.id, patch);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => update({ imageUrl: reader.result as string });
-    reader.readAsDataURL(file);
+    const key = await storeImageFile(file);
+    update({ imageUrl: key });
   };
 
   return (
@@ -183,8 +202,8 @@ function BackgroundControls({
           />
           {layer.imageUrl && (
             <div className="rounded-md overflow-hidden border border-border h-20">
-              <img
-                src={layer.imageUrl}
+              <IdbImagePreview
+                url={layer.imageUrl}
                 alt="Background"
                 className="w-full h-full object-cover"
               />
@@ -358,12 +377,11 @@ function DeviceControls({
     ? DEVICE_LIST.filter((d) => d.category === targetDevice.category)
     : DEVICE_LIST;
 
-  const handleScreenshotUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleScreenshotUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => update({ screenshotUrl: reader.result as string });
-    reader.readAsDataURL(file);
+    const key = await storeImageFile(file);
+    update({ screenshotUrl: key });
   };
 
   return (
@@ -534,12 +552,11 @@ function ImageControls({
 
   const slide = project?.slides.find((s) => s.id === activeSlideId);
 
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => update({ url: reader.result as string });
-    reader.readAsDataURL(file);
+    const key = await storeImageFile(file);
+    update({ url: key });
   };
 
   return (
