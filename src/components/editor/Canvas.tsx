@@ -313,6 +313,9 @@ export default function Canvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 420, height: 840 });
   const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const isPanning = useRef(false);
+  const panStart = useRef({ x: 0, y: 0 });
   const project = useEditorStore((s) => s.project);
   const activeSlideId = useEditorStore((s) => s.activeSlideId);
   const activeLayerId = useEditorStore((s) => s.activeLayerId);
@@ -342,22 +345,67 @@ export default function Canvas() {
     return () => window.removeEventListener("resize", updateDimensions);
   }, [updateDimensions]);
 
-  // Ctrl + wheel zoom
+  // Ctrl + wheel → zoom, plain wheel → pan
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     const handleWheel = (e: WheelEvent) => {
-      if (!e.ctrlKey && !e.metaKey) return;
-      e.preventDefault();
-      setZoom((prev) => {
-        const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
-        return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round((prev + delta) * 100) / 100));
-      });
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        setZoom((prev) => {
+          const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+          return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round((prev + delta) * 100) / 100));
+        });
+      } else {
+        e.preventDefault();
+        setPan((prev) => ({
+          x: prev.x - e.deltaX,
+          y: prev.y - e.deltaY,
+        }));
+      }
     };
 
     container.addEventListener("wheel", handleWheel, { passive: false });
     return () => container.removeEventListener("wheel", handleWheel);
+  }, []);
+
+  // Middle mouse button drag → pan
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      if (e.button !== 1) return;
+      e.preventDefault();
+      isPanning.current = true;
+      panStart.current = { x: e.clientX, y: e.clientY };
+      container.style.cursor = "grabbing";
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isPanning.current) return;
+      setPan((prev) => ({
+        x: prev.x + e.clientX - panStart.current.x,
+        y: prev.y + e.clientY - panStart.current.y,
+      }));
+      panStart.current = { x: e.clientX, y: e.clientY };
+    };
+
+    const handleMouseUp = () => {
+      if (!isPanning.current) return;
+      isPanning.current = false;
+      container.style.cursor = "";
+    };
+
+    container.addEventListener("mousedown", handleMouseDown);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      container.removeEventListener("mousedown", handleMouseDown);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
   }, []);
 
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -383,7 +431,7 @@ export default function Canvas() {
         style={{
           width: dimensions.width,
           height: dimensions.height,
-          transform: `scale(${zoom})`,
+          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
           transformOrigin: "center center",
         }}
       >
@@ -455,12 +503,12 @@ export default function Canvas() {
         </Stage>
       </div>
 
-      {/* Zoom indicator */}
-      {zoom !== 1 && (
+      {/* Zoom / pan indicator */}
+      {(zoom !== 1 || pan.x !== 0 || pan.y !== 0) && (
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-surface/90 border border-border rounded-full px-3 py-1 text-xs text-muted">
           <span>{Math.round(zoom * 100)}%</span>
           <button
-            onClick={() => setZoom(1)}
+            onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
             className="text-accent hover:text-foreground transition-colors"
           >
             Reset
