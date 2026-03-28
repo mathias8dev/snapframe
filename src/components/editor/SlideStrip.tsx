@@ -51,7 +51,12 @@ function ThumbBackground({
   width: number;
   height: number;
 }) {
+  const bgImage = useLoadImage(layer.kind === "image" ? layer.imageUrl : null);
   if (!layer.visible) return null;
+
+  if (layer.kind === "image" && bgImage) {
+    return <KonvaImage image={bgImage} width={width} height={height} />;
+  }
 
   if (layer.kind === "gradient") {
     const rad = (layer.angle * Math.PI) / 180;

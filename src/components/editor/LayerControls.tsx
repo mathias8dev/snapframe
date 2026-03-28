@@ -134,8 +134,17 @@ function BackgroundControls({
   slideId: string;
 }) {
   const updateLayer = useEditorStore((s) => s.updateLayer);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const update = (patch: Partial<BackgroundLayer>) =>
     updateLayer(slideId, layer.id, patch);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => update({ imageUrl: reader.result as string });
+    reader.readAsDataURL(file);
+  };
 
   return (
     <div className="flex flex-col gap-3">
@@ -156,11 +165,41 @@ function BackgroundControls({
         ))}
       </div>
 
-      <ColorPickerControl
-        label="Color 1"
-        value={layer.color1}
-        onChange={(v) => update({ color1: v })}
-      />
+      {layer.kind === "image" && (
+        <>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full flex items-center justify-center gap-2 py-2 bg-accent hover:bg-accent-hover text-white rounded-md text-sm transition-colors"
+          >
+            <Upload size={14} />
+            {layer.imageUrl ? "Change Image" : "Upload Image"}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleImageUpload}
+          />
+          {layer.imageUrl && (
+            <div className="rounded-md overflow-hidden border border-border h-20">
+              <img
+                src={layer.imageUrl}
+                alt="Background"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+        </>
+      )}
+
+      {layer.kind !== "image" && (
+        <ColorPickerControl
+          label="Color 1"
+          value={layer.color1}
+          onChange={(v) => update({ color1: v })}
+        />
+      )}
 
       {layer.kind === "gradient" && (
         <>

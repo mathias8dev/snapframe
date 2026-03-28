@@ -6,11 +6,13 @@ import dynamic from "next/dynamic";
 import {
   Smartphone,
   Download,
+  Save,
   ChevronLeft,
 } from "lucide-react";
 import useEditorStore, {
   getStoredProjects,
   persistProject,
+  persistProjectSync,
 } from "@/lib/store";
 import Toolbar from "@/components/editor/Toolbar";
 import SlideStrip from "@/components/editor/SlideStrip";
@@ -122,6 +124,17 @@ export default function EditorPage() {
             }
             className="bg-transparent border border-transparent hover:border-border focus:border-accent rounded-md px-2 py-1 text-sm text-foreground outline-none transition-colors max-w-[200px]"
           />
+          <button
+            onClick={() => {
+              if (project) {
+                persistProjectSync(project);
+              }
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-surface border border-border hover:border-accent/50 text-foreground text-sm rounded-md transition-colors"
+          >
+            <Save size={14} />
+            Save
+          </button>
           <button
             onClick={() => setShowExport(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-sm rounded-md transition-colors"

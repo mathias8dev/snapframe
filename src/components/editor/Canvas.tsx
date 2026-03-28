@@ -36,7 +36,18 @@ function BackgroundRenderer({
   width: number;
   height: number;
 }) {
+  const bgImage = useLoadImage(layer.kind === "image" ? layer.imageUrl : null);
   if (!layer.visible) return null;
+
+  if (layer.kind === "image" && bgImage) {
+    return (
+      <KonvaImage
+        image={bgImage}
+        width={width}
+        height={height}
+      />
+    );
+  }
 
   if (layer.kind === "solid") {
     return <Rect width={width} height={height} fill={layer.color1} />;
