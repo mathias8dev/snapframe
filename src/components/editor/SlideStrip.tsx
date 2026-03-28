@@ -1,11 +1,24 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Stage, Layer, Rect, Text, Group, Image as KonvaImage } from "react-konva";
 import Konva from "konva";
 import { Plus, MoreVertical, Copy, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import useEditorStore from "@/lib/store";
 import { DEVICES } from "@/lib/deviceConfigs";
+import {
+  computeDeviceLayout,
+  computeButtonRect,
+  REF_W,
+  REF_H,
+  FRAME_FILL,
+  FRAME_STROKE,
+  SCREEN_BG,
+  CANVAS_BG,
+  DYNAMIC_ISLAND,
+  NOTCH,
+} from "@/lib/deviceGeometry";
+import { useLoadImage } from "@/lib/useLoadImage";
 import {
   BackgroundLayer,
   TitleLayer,
@@ -13,34 +26,6 @@ import {
   ImageLayer,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-// ---------------------------------------------------------------------------
-// Shared image loader (same as Canvas.tsx)
-// ---------------------------------------------------------------------------
-
-function useLoadImage(url: string | null) {
-  const [image, setImage] = useState<HTMLImageElement | null>(null);
-  useEffect(() => {
-    if (!url) {
-      setImage(null);
-      return;
-    }
-    const img = new window.Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => setImage(img);
-    img.src = url;
-  }, [url]);
-  return image;
-}
-
-// ---------------------------------------------------------------------------
-// Read-only layer renderers for thumbnails
-// (mirror Canvas.tsx logic but without interactivity)
-// ---------------------------------------------------------------------------
-
-// Reference canvas size the editor uses
-const REF_W = 420;
-const REF_H = 840;
 
 function ThumbBackground({
   layer,
@@ -132,58 +117,29 @@ function ThumbDevice({
   const screenshotImage = useLoadImage(layer.screenshotUrl);
   if (!layer.visible || !device) return null;
 
-  const scaleX = canvasWidth / REF_W;
-  const scaleY = canvasHeight / REF_H;
-
-  const padding = layer.padding * scaleX;
-  const availW = canvasWidth - padding * 2;
-  const availH = canvasHeight - padding * 2 - 120 * scaleY;
-
-  const devW = device.exportWidth;
-  const devH = device.exportHeight;
-  const scale = Math.min(availW / devW, availH / devH);
-
-  const frameW = devW * scale;
-  const frameH = devH * scale;
-  const frameX = (canvasWidth - frameW) / 2;
-  const frameY = (canvasHeight - frameH) / 2 + 40 * scaleY;
-
-  const cr =
-    layer.cornerRounding === "auto"
-      ? device.cornerRadius * scale
-      : layer.cornerRounding * scale;
-
-  const screenX = frameX + device.screenInset.left * scale;
-  const screenY = frameY + device.screenInset.top * scale;
-  const screenW =
-    frameW - (device.screenInset.left + device.screenInset.right) * scale;
-  const screenH =
-    frameH - (device.screenInset.top + device.screenInset.bottom) * scale;
+  const thumbScale = { x: canvasWidth / REF_W, y: canvasHeight / REF_H };
+  const layout = computeDeviceLayout(device, canvasWidth, canvasHeight, layer, thumbScale);
+  const { frameX, frameY, frameW, frameH, cr, screenX, screenY, screenW, screenH, screenCr, pivotX, pivotY, scale } = layout;
 
   const oX = layer.offsetX ?? 0;
   const oY = layer.offsetY ?? 0;
-  const pivotX = frameX + frameW / 2;
-  const pivotY = frameY + frameH / 2;
 
   return (
     <Group
       rotation={layer.rotation ?? 0}
       offsetX={pivotX}
       offsetY={pivotY}
-      x={pivotX + oX * scaleX}
-      y={pivotY + oY * scaleY}
+      x={pivotX + oX * thumbScale.x}
+      y={pivotY + oY * thumbScale.y}
       listening={false}
     >
       {/* Frame */}
       {layer.frameVisible && (
         <Rect
-          x={frameX}
-          y={frameY}
-          width={frameW}
-          height={frameH}
+          x={frameX} y={frameY} width={frameW} height={frameH}
           cornerRadius={cr}
-          fill="#1a1a1a"
-          stroke="#333"
+          fill={FRAME_FILL}
+          stroke={FRAME_STROKE}
           strokeWidth={0.5}
           opacity={layer.frameOpacity}
         />
@@ -192,89 +148,59 @@ function ThumbDevice({
       {/* Screen (clipped) */}
       <Group
         clipFunc={(ctx: Konva.Context) => {
-          const scr = device.cornerRadius * scale * 0.85;
           ctx.beginPath();
-          ctx.moveTo(screenX + scr, screenY);
-          ctx.lineTo(screenX + screenW - scr, screenY);
-          ctx.quadraticCurveTo(screenX + screenW, screenY, screenX + screenW, screenY + scr);
-          ctx.lineTo(screenX + screenW, screenY + screenH - scr);
-          ctx.quadraticCurveTo(screenX + screenW, screenY + screenH, screenX + screenW - scr, screenY + screenH);
-          ctx.lineTo(screenX + scr, screenY + screenH);
-          ctx.quadraticCurveTo(screenX, screenY + screenH, screenX, screenY + screenH - scr);
-          ctx.lineTo(screenX, screenY + scr);
-          ctx.quadraticCurveTo(screenX, screenY, screenX + scr, screenY);
+          ctx.moveTo(screenX + screenCr, screenY);
+          ctx.lineTo(screenX + screenW - screenCr, screenY);
+          ctx.quadraticCurveTo(screenX + screenW, screenY, screenX + screenW, screenY + screenCr);
+          ctx.lineTo(screenX + screenW, screenY + screenH - screenCr);
+          ctx.quadraticCurveTo(screenX + screenW, screenY + screenH, screenX + screenW - screenCr, screenY + screenH);
+          ctx.lineTo(screenX + screenCr, screenY + screenH);
+          ctx.quadraticCurveTo(screenX, screenY + screenH, screenX, screenY + screenH - screenCr);
+          ctx.lineTo(screenX, screenY + screenCr);
+          ctx.quadraticCurveTo(screenX, screenY, screenX + screenCr, screenY);
           ctx.closePath();
         }}
       >
-        <Rect x={screenX} y={screenY} width={screenW} height={screenH} fill="#000" />
+        <Rect x={screenX} y={screenY} width={screenW} height={screenH} fill={SCREEN_BG} />
         {screenshotImage && (
-          <KonvaImage
-            image={screenshotImage}
-            x={screenX}
-            y={screenY}
-            width={screenW}
-            height={screenH}
-          />
+          <KonvaImage image={screenshotImage} x={screenX} y={screenY} width={screenW} height={screenH} />
         )}
       </Group>
 
       {/* Dynamic Island */}
       {device.dynamicIsland && layer.frameVisible && (
         <Rect
-          x={frameX + frameW / 2 - 40 * scale}
-          y={frameY + 12 * scale}
-          width={80 * scale}
-          height={24 * scale}
-          cornerRadius={12 * scale}
-          fill="#000"
+          x={frameX + frameW / 2 - (DYNAMIC_ISLAND.width / 2) * scale}
+          y={frameY + DYNAMIC_ISLAND.yOffset * scale}
+          width={DYNAMIC_ISLAND.width * scale}
+          height={DYNAMIC_ISLAND.height * scale}
+          cornerRadius={(DYNAMIC_ISLAND.height / 2) * scale}
+          fill={SCREEN_BG}
         />
       )}
 
       {/* Notch */}
       {device.notch && !device.dynamicIsland && layer.frameVisible && (
         <Rect
-          x={frameX + frameW / 2 - 60 * scale}
+          x={frameX + frameW / 2 - (NOTCH.width / 2) * scale}
           y={frameY}
-          width={120 * scale}
-          height={28 * scale}
-          cornerRadius={[0, 0, 14 * scale, 14 * scale]}
-          fill="#1a1a1a"
+          width={NOTCH.width * scale}
+          height={NOTCH.height * scale}
+          cornerRadius={[0, 0, NOTCH.radius * scale, NOTCH.radius * scale]}
+          fill={FRAME_FILL}
         />
       )}
 
       {/* Hardware buttons */}
       {layer.frameVisible &&
         device.buttons?.map((btn, i) => {
-          const thickness = 3 * scale;
-          const btnRadius = thickness / 2;
-          let bx: number, by: number, bw: number, bh: number;
-
-          if (btn.side === "right") {
-            bx = frameX + frameW;
-            by = frameY + btn.offsetPercent * frameH;
-            bw = thickness;
-            bh = btn.lengthPercent * frameH;
-          } else if (btn.side === "left") {
-            bx = frameX - thickness;
-            by = frameY + btn.offsetPercent * frameH;
-            bw = thickness;
-            bh = btn.lengthPercent * frameH;
-          } else {
-            bx = frameX + btn.offsetPercent * frameW;
-            by = frameY - thickness;
-            bw = btn.lengthPercent * frameW;
-            bh = thickness;
-          }
-
+          const r = computeButtonRect(btn, frameX, frameY, frameW, frameH, scale);
           return (
             <Rect
               key={i}
-              x={bx}
-              y={by}
-              width={bw}
-              height={bh}
-              cornerRadius={btnRadius}
-              fill="#1a1a1a"
+              x={r.x} y={r.y} width={r.width} height={r.height}
+              cornerRadius={r.radius}
+              fill={FRAME_FILL}
               opacity={layer.frameOpacity}
             />
           );
@@ -355,7 +281,7 @@ function SlideThumbnail({
         <Stage width={thumbW} height={thumbH} listening={false}>
           <Layer>
             {/* Fallback background */}
-            <Rect width={thumbW} height={thumbH} fill="#18181b" />
+            <Rect width={thumbW} height={thumbH} fill={CANVAS_BG} />
 
             {slide.layers.map((layer) => {
               switch (layer.type) {

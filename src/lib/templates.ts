@@ -1,5 +1,6 @@
 import { v4 as uuid } from "uuid";
-import { Project, BackgroundLayer, TitleLayer, DeviceLayer } from "./types";
+import { Project, BackgroundLayer, TitleLayer } from "./types";
+import { createDefaultDeviceLayer } from "./layerDefaults";
 
 interface TemplateDefinition {
   id: string;
@@ -168,24 +169,7 @@ export function createProjectFromTemplate(template: TemplateDefinition): Project
             align: "center",
             position: "top",
           } as TitleLayer,
-          {
-            id: uuid(),
-            name: "Device",
-            type: "device",
-            visible: true,
-            locked: false,
-            deviceId: template.deviceId,
-            orientation: "portrait",
-            sizing: "contain",
-            cornerRounding: "auto",
-            frameVisible: true,
-            frameOpacity: 1,
-            padding: 40,
-            rotation: 0,
-            offsetX: 0,
-            offsetY: 0,
-            screenshotUrl: null,
-          } as DeviceLayer,
+          createDefaultDeviceLayer({ deviceId: template.deviceId }),
         ],
       },
     ],

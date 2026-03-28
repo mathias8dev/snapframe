@@ -100,12 +100,14 @@ src/
 │   ├── LayerPanel.tsx           # Layer list with drag-to-reorder
 │   ├── LayerControls.tsx        # Property inspector for selected layer
 │   ├── AddLayerMenu.tsx         # Add new layers
-│   ├── DeviceFrame.tsx          # Device picker modal
 │   └── ExportModal.tsx          # Export dialog
 └── lib/
     ├── types.ts                 # TypeScript interfaces
     ├── store.ts                 # Zustand store with undo/redo
     ├── deviceConfigs.ts         # Device specs (dimensions, insets, features)
+    ├── deviceGeometry.ts        # Shared device layout computation and constants
+    ├── useLoadImage.ts          # Shared image loading hook
+    ├── layerDefaults.ts         # Default layer factory functions
     ├── templates.ts             # 12 template definitions
     └── utils.ts                 # Utility functions
 ```

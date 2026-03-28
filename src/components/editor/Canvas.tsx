@@ -6,26 +6,22 @@ import Konva from "konva";
 import useEditorStore from "@/lib/store";
 import { DEVICES } from "@/lib/deviceConfigs";
 import {
+  computeDeviceLayout,
+  computeButtonRect,
+  FRAME_FILL,
+  FRAME_STROKE,
+  SCREEN_BG,
+  CANVAS_BG,
+  DYNAMIC_ISLAND,
+  NOTCH,
+} from "@/lib/deviceGeometry";
+import { useLoadImage } from "@/lib/useLoadImage";
+import {
   BackgroundLayer,
   TitleLayer,
   DeviceLayer,
   ImageLayer,
 } from "@/lib/types";
-
-function useLoadImage(url: string | null) {
-  const [image, setImage] = useState<HTMLImageElement | null>(null);
-  useEffect(() => {
-    if (!url) {
-      setImage(null);
-      return;
-    }
-    const img = new window.Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => setImage(img);
-    img.src = url;
-  }, [url]);
-  return image;
-}
 
 function BackgroundRenderer({
   layer,
@@ -151,34 +147,10 @@ function DeviceRenderer({
   const updateLayer = useEditorStore((s) => s.updateLayer);
   if (!layer.visible || !device) return null;
 
-  const padding = layer.padding;
-  const availW = canvasWidth - padding * 2;
-  const availH = canvasHeight - padding * 2 - 120;
-
-  const devW = device.exportWidth;
-  const devH = device.exportHeight;
-  const scale = Math.min(availW / devW, availH / devH);
-
-  const frameW = devW * scale;
-  const frameH = devH * scale;
-  const frameX = (canvasWidth - frameW) / 2;
-  const frameY = (canvasHeight - frameH) / 2 + 40;
-
-  const cr =
-    layer.cornerRounding === "auto"
-      ? device.cornerRadius * scale
-      : layer.cornerRounding * scale;
-
-  const screenX = frameX + device.screenInset.left * scale;
-  const screenY = frameY + device.screenInset.top * scale;
-  const screenW = frameW - (device.screenInset.left + device.screenInset.right) * scale;
-  const screenH = frameH - (device.screenInset.top + device.screenInset.bottom) * scale;
-
-  // Rotation pivot: center of the device frame
+  const layout = computeDeviceLayout(device, canvasWidth, canvasHeight, layer);
+  const { frameX, frameY, frameW, frameH, cr, screenX, screenY, screenW, screenH, screenCr, pivotX, pivotY, scale } = layout;
   const oX = layer.offsetX ?? 0;
   const oY = layer.offsetY ?? 0;
-  const pivotX = frameX + frameW / 2;
-  const pivotY = frameY + frameH / 2;
 
   return (
     <Group
@@ -191,119 +163,80 @@ function DeviceRenderer({
       x={pivotX + oX}
       y={pivotY + oY}
       onDragEnd={(e) => {
-        const newOX = e.target.x() - pivotX;
-        const newOY = e.target.y() - pivotY;
-        updateLayer(slideId, layer.id, { offsetX: newOX, offsetY: newOY });
+        updateLayer(slideId, layer.id, {
+          offsetX: e.target.x() - pivotX,
+          offsetY: e.target.y() - pivotY,
+        });
       }}
     >
       {/* Device frame */}
       {layer.frameVisible && (
         <Rect
-          x={frameX}
-          y={frameY}
-          width={frameW}
-          height={frameH}
+          x={frameX} y={frameY} width={frameW} height={frameH}
           cornerRadius={cr}
-          fill="#1a1a1a"
-          stroke={isSelected ? "#7c3aed" : "#333"}
+          fill={FRAME_FILL}
+          stroke={isSelected ? "#7c3aed" : FRAME_STROKE}
           strokeWidth={isSelected ? 2 : 1}
           opacity={layer.frameOpacity}
         />
       )}
 
-      {/* Screen area */}
+      {/* Screen area (clipped) */}
       <Group
         clipFunc={(ctx: Konva.Context) => {
           ctx.beginPath();
-          const scr = cr * 0.85;
-          const sx = screenX;
-          const sy = screenY;
-          const sw = screenW;
-          const sh = screenH;
-          ctx.moveTo(sx + scr, sy);
-          ctx.lineTo(sx + sw - scr, sy);
-          ctx.quadraticCurveTo(sx + sw, sy, sx + sw, sy + scr);
-          ctx.lineTo(sx + sw, sy + sh - scr);
-          ctx.quadraticCurveTo(sx + sw, sy + sh, sx + sw - scr, sy + sh);
-          ctx.lineTo(sx + scr, sy + sh);
-          ctx.quadraticCurveTo(sx, sy + sh, sx, sy + sh - scr);
-          ctx.lineTo(sx, sy + scr);
-          ctx.quadraticCurveTo(sx, sy, sx + scr, sy);
+          ctx.moveTo(screenX + screenCr, screenY);
+          ctx.lineTo(screenX + screenW - screenCr, screenY);
+          ctx.quadraticCurveTo(screenX + screenW, screenY, screenX + screenW, screenY + screenCr);
+          ctx.lineTo(screenX + screenW, screenY + screenH - screenCr);
+          ctx.quadraticCurveTo(screenX + screenW, screenY + screenH, screenX + screenW - screenCr, screenY + screenH);
+          ctx.lineTo(screenX + screenCr, screenY + screenH);
+          ctx.quadraticCurveTo(screenX, screenY + screenH, screenX, screenY + screenH - screenCr);
+          ctx.lineTo(screenX, screenY + screenCr);
+          ctx.quadraticCurveTo(screenX, screenY, screenX + screenCr, screenY);
           ctx.closePath();
         }}
       >
-        {/* Screen background */}
-        <Rect x={screenX} y={screenY} width={screenW} height={screenH} fill="#000" />
-
-        {/* Screenshot image */}
+        <Rect x={screenX} y={screenY} width={screenW} height={screenH} fill={SCREEN_BG} />
         {screenshotImage && (
-          <KonvaImage
-            image={screenshotImage}
-            x={screenX}
-            y={screenY}
-            width={screenW}
-            height={screenH}
-          />
+          <KonvaImage image={screenshotImage} x={screenX} y={screenY} width={screenW} height={screenH} />
         )}
       </Group>
 
       {/* Dynamic Island */}
       {device.dynamicIsland && layer.frameVisible && (
         <Rect
-          x={frameX + frameW / 2 - 40 * scale}
-          y={frameY + 12 * scale}
-          width={80 * scale}
-          height={24 * scale}
-          cornerRadius={12 * scale}
-          fill="#000"
+          x={frameX + frameW / 2 - (DYNAMIC_ISLAND.width / 2) * scale}
+          y={frameY + DYNAMIC_ISLAND.yOffset * scale}
+          width={DYNAMIC_ISLAND.width * scale}
+          height={DYNAMIC_ISLAND.height * scale}
+          cornerRadius={(DYNAMIC_ISLAND.height / 2) * scale}
+          fill={SCREEN_BG}
         />
       )}
 
       {/* Notch */}
       {device.notch && !device.dynamicIsland && layer.frameVisible && (
         <Rect
-          x={frameX + frameW / 2 - 60 * scale}
+          x={frameX + frameW / 2 - (NOTCH.width / 2) * scale}
           y={frameY}
-          width={120 * scale}
-          height={28 * scale}
-          cornerRadius={[0, 0, 14 * scale, 14 * scale]}
-          fill="#1a1a1a"
+          width={NOTCH.width * scale}
+          height={NOTCH.height * scale}
+          cornerRadius={[0, 0, NOTCH.radius * scale, NOTCH.radius * scale]}
+          fill={FRAME_FILL}
         />
       )}
 
       {/* Hardware buttons */}
       {layer.frameVisible &&
         device.buttons?.map((btn, i) => {
-          const thickness = 3 * scale;
-          const btnRadius = thickness / 2;
-          let bx: number, by: number, bw: number, bh: number;
-
-          if (btn.side === "right") {
-            bx = frameX + frameW;
-            by = frameY + btn.offsetPercent * frameH;
-            bw = thickness;
-            bh = btn.lengthPercent * frameH;
-          } else if (btn.side === "left") {
-            bx = frameX - thickness;
-            by = frameY + btn.offsetPercent * frameH;
-            bw = thickness;
-            bh = btn.lengthPercent * frameH;
-          } else {
-            bx = frameX + btn.offsetPercent * frameW;
-            by = frameY - thickness;
-            bw = btn.lengthPercent * frameW;
-            bh = thickness;
-          }
-
+          const r = computeButtonRect(btn, frameX, frameY, frameW, frameH, scale);
           return (
             <Rect
               key={i}
-              x={bx}
-              y={by}
-              width={bw}
-              height={bh}
-              cornerRadius={btnRadius}
-              fill="#1a1a1a"
+              x={r.x} y={r.y} width={r.width} height={r.height}
+              cornerRadius={r.radius}
+              fill={FRAME_FILL}
               opacity={layer.frameOpacity}
             />
           );
@@ -494,7 +427,7 @@ export default function Canvas() {
               id="canvas-bg"
               width={dimensions.width}
               height={dimensions.height}
-              fill="#18181b"
+              fill={CANVAS_BG}
             />
             {slide?.layers.map((layer) => {
               const isSelected = layer.id === activeLayerId;

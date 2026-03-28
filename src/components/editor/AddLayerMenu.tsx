@@ -10,10 +10,10 @@ import {
   Image,
 } from "lucide-react";
 import useEditorStore from "@/lib/store";
+import { createDefaultDeviceLayer } from "@/lib/layerDefaults";
 import {
   BackgroundLayer,
   TitleLayer,
-  DeviceLayer,
   ImageLayer,
 } from "@/lib/types";
 
@@ -61,24 +61,7 @@ const LAYER_OPTIONS = [
     type: "device" as const,
     label: "Device",
     icon: Smartphone,
-    create: (): DeviceLayer => ({
-      id: uuid(),
-      name: "Device",
-      type: "device",
-      visible: true,
-      locked: false,
-      deviceId: "iosgeneric",
-      orientation: "portrait",
-      sizing: "contain",
-      cornerRounding: "auto",
-      frameVisible: true,
-      frameOpacity: 1,
-      padding: 40,
-      rotation: 0,
-      offsetX: 0,
-      offsetY: 0,
-      screenshotUrl: null,
-    }),
+    create: () => createDefaultDeviceLayer(),
   },
   {
     type: "image" as const,

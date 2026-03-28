@@ -15,6 +15,18 @@ import {
 import useEditorStore from "@/lib/store";
 import { DEVICES } from "@/lib/deviceConfigs";
 import {
+  computeDeviceLayout,
+  computeButtonRect,
+  REF_W,
+  REF_H,
+  FRAME_FILL,
+  FRAME_STROKE,
+  SCREEN_BG,
+  CANVAS_BG,
+  DYNAMIC_ISLAND,
+  NOTCH,
+} from "@/lib/deviceGeometry";
+import {
   BackgroundLayer,
   TitleLayer,
   DeviceLayer,
@@ -218,9 +230,6 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
           ? project.slides.filter((s) => s.id === activeSlideId)
           : project.slides;
 
-      // Reference canvas size used by the editor (Canvas.tsx defaults)
-      const REF_W = 420;
-      const REF_H = 840;
       const scaleX = exportW / REF_W;
       const scaleY = exportH / REF_H;
 
@@ -256,7 +265,7 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
         canvas.height = exportH * resolution;
         const ctx = canvas.getContext("2d")!;
         ctx.scale(resolution, resolution);
-        ctx.fillStyle = "#18181b";
+        ctx.fillStyle = CANVAS_BG;
         ctx.fillRect(0, 0, exportW, exportH);
 
         // Pre-load all images needed by this slide
@@ -334,57 +343,37 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
               const device = DEVICES[dl.deviceId];
               if (!device) break;
 
-              const padding = dl.padding * scaleX;
-              const availW = exportW - padding * 2;
-              const availH = exportH - padding * 2 - (120 * scaleY);
-
-              const devW = device.exportWidth;
-              const devH = device.exportHeight;
-              const devScale = Math.min(availW / devW, availH / devH);
-
-              const frameW = devW * devScale;
-              const frameH = devH * devScale;
-              const frameX = (exportW - frameW) / 2;
-              const frameY = (exportH - frameH) / 2 + (40 * scaleY);
-
-              const cr =
-                dl.cornerRounding === "auto"
-                  ? device.cornerRadius * devScale
-                  : dl.cornerRounding * devScale;
-
-              const screenX = frameX + device.screenInset.left * devScale;
-              const screenY = frameY + device.screenInset.top * devScale;
-              const screenW = frameW - (device.screenInset.left + device.screenInset.right) * devScale;
-              const screenH = frameH - (device.screenInset.top + device.screenInset.bottom) * devScale;
-              const screenCr = cr * 0.85;
+              const thumbScale = { x: scaleX, y: scaleY };
+              const layout = computeDeviceLayout(device, exportW, exportH, dl, thumbScale);
+              const { frameX, frameY, frameW, frameH, cr, screenX, screenY, screenW, screenH, screenCr, pivotX, pivotY, scale: devScale } = layout;
 
               const rotationDeg = dl.rotation ?? 0;
               const oX = (dl.offsetX ?? 0) * scaleX;
               const oY = (dl.offsetY ?? 0) * scaleY;
-              const pivotX = frameX + frameW / 2;
-              const pivotY = frameY + frameH / 2;
 
               ctx.save();
               ctx.translate(pivotX + oX, pivotY + oY);
               ctx.rotate((rotationDeg * Math.PI) / 180);
               ctx.translate(-pivotX, -pivotY);
 
+              // Frame
               if (dl.frameVisible) {
                 ctx.save();
                 ctx.globalAlpha = dl.frameOpacity;
                 drawRoundedRect(ctx, frameX, frameY, frameW, frameH, cr);
-                ctx.fillStyle = "#1a1a1a";
+                ctx.fillStyle = FRAME_FILL;
                 ctx.fill();
-                ctx.strokeStyle = "#333";
+                ctx.strokeStyle = FRAME_STROKE;
                 ctx.lineWidth = 1;
                 ctx.stroke();
                 ctx.restore();
               }
 
+              // Screen (clipped)
               ctx.save();
               drawRoundedRect(ctx, screenX, screenY, screenW, screenH, screenCr);
               ctx.clip();
-              ctx.fillStyle = "#000";
+              ctx.fillStyle = SCREEN_BG;
               ctx.fillRect(screenX, screenY, screenW, screenH);
               if (dl.screenshotUrl) {
                 const ssImg = imageCache.get(dl.screenshotUrl);
@@ -392,60 +381,39 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
               }
               ctx.restore();
 
+              // Dynamic Island
               if (device.dynamicIsland && dl.frameVisible) {
-                const diW = 80 * devScale;
-                const diH = 24 * devScale;
-                const diX = frameX + frameW / 2 - diW / 2;
-                const diY = frameY + 12 * devScale;
-                drawRoundedRect(ctx, diX, diY, diW, diH, 12 * devScale);
-                ctx.fillStyle = "#000";
+                const diW = DYNAMIC_ISLAND.width * devScale;
+                const diH = DYNAMIC_ISLAND.height * devScale;
+                drawRoundedRect(ctx, frameX + frameW / 2 - diW / 2, frameY + DYNAMIC_ISLAND.yOffset * devScale, diW, diH, (DYNAMIC_ISLAND.height / 2) * devScale);
+                ctx.fillStyle = SCREEN_BG;
                 ctx.fill();
               }
 
+              // Notch
               if (device.notch && !device.dynamicIsland && dl.frameVisible) {
-                const nW = 120 * devScale;
-                const nH = 28 * devScale;
+                const nW = NOTCH.width * devScale;
+                const nH = NOTCH.height * devScale;
                 const nX = frameX + frameW / 2 - nW / 2;
-                const nY = frameY;
-                const nR = 14 * devScale;
+                const nR = NOTCH.radius * devScale;
                 ctx.beginPath();
-                ctx.moveTo(nX, nY);
-                ctx.lineTo(nX + nW, nY);
-                ctx.lineTo(nX + nW, nY + nH - nR);
-                ctx.quadraticCurveTo(nX + nW, nY + nH, nX + nW - nR, nY + nH);
-                ctx.lineTo(nX + nR, nY + nH);
-                ctx.quadraticCurveTo(nX, nY + nH, nX, nY + nH - nR);
+                ctx.moveTo(nX, frameY);
+                ctx.lineTo(nX + nW, frameY);
+                ctx.lineTo(nX + nW, frameY + nH - nR);
+                ctx.quadraticCurveTo(nX + nW, frameY + nH, nX + nW - nR, frameY + nH);
+                ctx.lineTo(nX + nR, frameY + nH);
+                ctx.quadraticCurveTo(nX, frameY + nH, nX, frameY + nH - nR);
                 ctx.closePath();
-                ctx.fillStyle = "#1a1a1a";
+                ctx.fillStyle = FRAME_FILL;
                 ctx.fill();
               }
 
               // Hardware buttons
               if (dl.frameVisible && device.buttons) {
                 for (const btn of device.buttons) {
-                  const thickness = 3 * devScale;
-                  const btnRadius = thickness / 2;
-                  let bx: number, by: number, bw: number, bh: number;
-
-                  if (btn.side === "right") {
-                    bx = frameX + frameW;
-                    by = frameY + btn.offsetPercent * frameH;
-                    bw = thickness;
-                    bh = btn.lengthPercent * frameH;
-                  } else if (btn.side === "left") {
-                    bx = frameX - thickness;
-                    by = frameY + btn.offsetPercent * frameH;
-                    bw = thickness;
-                    bh = btn.lengthPercent * frameH;
-                  } else {
-                    bx = frameX + btn.offsetPercent * frameW;
-                    by = frameY - thickness;
-                    bw = btn.lengthPercent * frameW;
-                    bh = thickness;
-                  }
-
-                  drawRoundedRect(ctx, bx, by, bw, bh, btnRadius);
-                  ctx.fillStyle = "#1a1a1a";
+                  const r = computeButtonRect(btn, frameX, frameY, frameW, frameH, devScale);
+                  drawRoundedRect(ctx, r.x, r.y, r.width, r.height, r.radius);
+                  ctx.fillStyle = FRAME_FILL;
                   ctx.fill();
                 }
               }
