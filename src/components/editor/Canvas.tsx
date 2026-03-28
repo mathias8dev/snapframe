@@ -440,7 +440,7 @@ export default function Canvas() {
           height={dimensions.height}
           onClick={handleStageClick}
         >
-          <Layer>
+          <Layer key={activeSlideId}>
             <Rect
               id="canvas-bg"
               width={dimensions.width}
