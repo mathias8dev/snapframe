@@ -107,7 +107,7 @@ export default function TemplatesPage() {
                     fontFamily: template.fontFamily,
                   }}
                 >
-                  {template.title}
+                  {"title" in template ? template.title : template.name}
                 </p>
 
                 {/* Mini device */}
@@ -127,7 +127,10 @@ export default function TemplatesPage() {
               <div className="p-3 flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-semibold">{template.name}</h3>
-                  <p className="text-xs text-muted">{template.fontFamily}</p>
+                  <p className="text-xs text-muted">
+                    {template.fontFamily}
+                    {"slides" in template && ` · ${template.slides.length} slides`}
+                  </p>
                 </div>
                 <button
                   onClick={() => handleUseTemplate(template.id)}
