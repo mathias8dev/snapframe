@@ -431,7 +431,7 @@ function DeviceControls({
         label="Corner Rounding"
         value={layer.cornerRounding === "auto" ? 0 : layer.cornerRounding}
         min={0}
-        max={200}
+        max={300}
         onChange={(v) => update({ cornerRounding: v === 0 ? "auto" : v })}
       />
 
