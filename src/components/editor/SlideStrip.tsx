@@ -1,11 +1,276 @@
 "use client";
 
-import React from "react";
-import { Stage, Layer, Rect, Text } from "react-konva";
+import React, { useEffect, useState } from "react";
+import { Stage, Layer, Rect, Text, Group, Image as KonvaImage } from "react-konva";
+import Konva from "konva";
 import { Plus, MoreVertical, Copy, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import useEditorStore from "@/lib/store";
-import { BackgroundLayer, TitleLayer } from "@/lib/types";
+import { DEVICES } from "@/lib/deviceConfigs";
+import {
+  BackgroundLayer,
+  TitleLayer,
+  DeviceLayer,
+  ImageLayer,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+// ---------------------------------------------------------------------------
+// Shared image loader (same as Canvas.tsx)
+// ---------------------------------------------------------------------------
+
+function useLoadImage(url: string | null) {
+  const [image, setImage] = useState<HTMLImageElement | null>(null);
+  useEffect(() => {
+    if (!url) {
+      setImage(null);
+      return;
+    }
+    const img = new window.Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => setImage(img);
+    img.src = url;
+  }, [url]);
+  return image;
+}
+
+// ---------------------------------------------------------------------------
+// Read-only layer renderers for thumbnails
+// (mirror Canvas.tsx logic but without interactivity)
+// ---------------------------------------------------------------------------
+
+// Reference canvas size the editor uses
+const REF_W = 420;
+const REF_H = 840;
+
+function ThumbBackground({
+  layer,
+  width,
+  height,
+}: {
+  layer: BackgroundLayer;
+  width: number;
+  height: number;
+}) {
+  if (!layer.visible) return null;
+
+  if (layer.kind === "gradient") {
+    const rad = (layer.angle * Math.PI) / 180;
+    const cx = width / 2;
+    const cy = height / 2;
+    const len = Math.sqrt(width * width + height * height) / 2;
+    return (
+      <Rect
+        width={width}
+        height={height}
+        fillLinearGradientStartPoint={{
+          x: cx - Math.cos(rad) * len,
+          y: cy - Math.sin(rad) * len,
+        }}
+        fillLinearGradientEndPoint={{
+          x: cx + Math.cos(rad) * len,
+          y: cy + Math.sin(rad) * len,
+        }}
+        fillLinearGradientColorStops={[0, layer.color1, 1, layer.color2]}
+      />
+    );
+  }
+
+  return <Rect width={width} height={height} fill={layer.color1} />;
+}
+
+function ThumbTitle({
+  layer,
+  canvasWidth,
+  canvasHeight,
+}: {
+  layer: TitleLayer;
+  canvasWidth: number;
+  canvasHeight: number;
+}) {
+  if (!layer.visible) return null;
+
+  const textWidth = (layer.width / 100) * canvasWidth;
+  const x =
+    layer.x !== 0 ? (layer.x / 100) * canvasWidth : (canvasWidth - textWidth) / 2;
+  const scaledFontSize = (layer.fontSize / REF_W) * canvasWidth;
+  const y =
+    layer.position === "top"
+      ? (layer.y / REF_H) * canvasHeight
+      : canvasHeight - (layer.y / REF_H) * canvasHeight - scaledFontSize * 1.5;
+
+  return (
+    <Text
+      text={layer.text}
+      x={x}
+      y={y}
+      width={textWidth}
+      fontSize={scaledFontSize}
+      fontFamily={layer.fontFamily}
+      fontStyle={layer.fontWeight >= 700 ? "bold" : "normal"}
+      fill={layer.color}
+      align={layer.align}
+      listening={false}
+    />
+  );
+}
+
+function ThumbDevice({
+  layer,
+  canvasWidth,
+  canvasHeight,
+}: {
+  layer: DeviceLayer;
+  canvasWidth: number;
+  canvasHeight: number;
+}) {
+  const device = DEVICES[layer.deviceId];
+  const screenshotImage = useLoadImage(layer.screenshotUrl);
+  if (!layer.visible || !device) return null;
+
+  const scaleX = canvasWidth / REF_W;
+  const scaleY = canvasHeight / REF_H;
+
+  const padding = layer.padding * scaleX;
+  const availW = canvasWidth - padding * 2;
+  const availH = canvasHeight - padding * 2 - 120 * scaleY;
+
+  const devW = device.exportWidth;
+  const devH = device.exportHeight;
+  const scale = Math.min(availW / devW, availH / devH);
+
+  const frameW = devW * scale;
+  const frameH = devH * scale;
+  const frameX = (canvasWidth - frameW) / 2;
+  const frameY = (canvasHeight - frameH) / 2 + 40 * scaleY;
+
+  const cr =
+    layer.cornerRounding === "auto"
+      ? device.cornerRadius * scale
+      : layer.cornerRounding * scale;
+
+  const screenX = frameX + device.screenInset.left * scale;
+  const screenY = frameY + device.screenInset.top * scale;
+  const screenW =
+    frameW - (device.screenInset.left + device.screenInset.right) * scale;
+  const screenH =
+    frameH - (device.screenInset.top + device.screenInset.bottom) * scale;
+
+  const oX = layer.offsetX ?? 0;
+  const oY = layer.offsetY ?? 0;
+  const pivotX = frameX + frameW / 2;
+  const pivotY = frameY + frameH / 2;
+
+  return (
+    <Group
+      rotation={layer.rotation ?? 0}
+      offsetX={pivotX}
+      offsetY={pivotY}
+      x={pivotX + oX * scaleX}
+      y={pivotY + oY * scaleY}
+      listening={false}
+    >
+      {/* Frame */}
+      {layer.frameVisible && (
+        <Rect
+          x={frameX}
+          y={frameY}
+          width={frameW}
+          height={frameH}
+          cornerRadius={cr}
+          fill="#1a1a1a"
+          stroke="#333"
+          strokeWidth={0.5}
+          opacity={layer.frameOpacity}
+        />
+      )}
+
+      {/* Screen (clipped) */}
+      <Group
+        clipFunc={(ctx: Konva.Context) => {
+          const scr = device.cornerRadius * scale * 0.85;
+          ctx.beginPath();
+          ctx.moveTo(screenX + scr, screenY);
+          ctx.lineTo(screenX + screenW - scr, screenY);
+          ctx.quadraticCurveTo(screenX + screenW, screenY, screenX + screenW, screenY + scr);
+          ctx.lineTo(screenX + screenW, screenY + screenH - scr);
+          ctx.quadraticCurveTo(screenX + screenW, screenY + screenH, screenX + screenW - scr, screenY + screenH);
+          ctx.lineTo(screenX + scr, screenY + screenH);
+          ctx.quadraticCurveTo(screenX, screenY + screenH, screenX, screenY + screenH - scr);
+          ctx.lineTo(screenX, screenY + scr);
+          ctx.quadraticCurveTo(screenX, screenY, screenX + scr, screenY);
+          ctx.closePath();
+        }}
+      >
+        <Rect x={screenX} y={screenY} width={screenW} height={screenH} fill="#000" />
+        {screenshotImage && (
+          <KonvaImage
+            image={screenshotImage}
+            x={screenX}
+            y={screenY}
+            width={screenW}
+            height={screenH}
+          />
+        )}
+      </Group>
+
+      {/* Dynamic Island */}
+      {device.dynamicIsland && layer.frameVisible && (
+        <Rect
+          x={frameX + frameW / 2 - 40 * scale}
+          y={frameY + 12 * scale}
+          width={80 * scale}
+          height={24 * scale}
+          cornerRadius={12 * scale}
+          fill="#000"
+        />
+      )}
+
+      {/* Notch */}
+      {device.notch && !device.dynamicIsland && layer.frameVisible && (
+        <Rect
+          x={frameX + frameW / 2 - 60 * scale}
+          y={frameY}
+          width={120 * scale}
+          height={28 * scale}
+          cornerRadius={[0, 0, 14 * scale, 14 * scale]}
+          fill="#1a1a1a"
+        />
+      )}
+    </Group>
+  );
+}
+
+function ThumbImage({
+  layer,
+  canvasWidth,
+  canvasHeight,
+}: {
+  layer: ImageLayer;
+  canvasWidth: number;
+  canvasHeight: number;
+}) {
+  const image = useLoadImage(layer.url);
+  if (!layer.visible || !image) return null;
+
+  const scaleX = canvasWidth / REF_W;
+  const scaleY = canvasHeight / REF_H;
+
+  return (
+    <KonvaImage
+      image={image}
+      x={layer.x * scaleX}
+      y={layer.y * scaleY}
+      width={(layer.width || REF_W * 0.5) * scaleX}
+      height={(layer.height || REF_H * 0.5) * scaleY}
+      opacity={layer.opacity}
+      listening={false}
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Slide thumbnail – renders all layers at thumbnail scale
+// ---------------------------------------------------------------------------
 
 function SlideThumbnail({
   slideId,
@@ -27,10 +292,7 @@ function SlideThumbnail({
   if (!slide) return null;
 
   const thumbW = 140;
-  const thumbH = 250;
-
-  const bgLayer = slide.layers.find((l) => l.type === "background") as BackgroundLayer | undefined;
-  const titleLayer = slide.layers.find((l) => l.type === "title") as TitleLayer | undefined;
+  const thumbH = (REF_H / REF_W) * thumbW; // keep same aspect ratio as canvas
 
   return (
     <div className="relative group">
@@ -49,58 +311,51 @@ function SlideThumbnail({
 
         <Stage width={thumbW} height={thumbH} listening={false}>
           <Layer>
-            {bgLayer && bgLayer.kind === "gradient" ? (
-              <Rect
-                width={thumbW}
-                height={thumbH}
-                fillLinearGradientStartPoint={{ x: 0, y: 0 }}
-                fillLinearGradientEndPoint={{ x: thumbW, y: thumbH }}
-                fillLinearGradientColorStops={[
-                  0,
-                  bgLayer.color1,
-                  1,
-                  bgLayer.color2,
-                ]}
-              />
-            ) : bgLayer ? (
-              <Rect width={thumbW} height={thumbH} fill={bgLayer.color1} />
-            ) : (
-              <Rect width={thumbW} height={thumbH} fill="#27272a" />
-            )}
+            {/* Fallback background */}
+            <Rect width={thumbW} height={thumbH} fill="#18181b" />
 
-            {titleLayer && titleLayer.visible && (
-              <Text
-                text={titleLayer.text}
-                x={8}
-                y={titleLayer.position === "top" ? 24 : thumbH - 40}
-                width={thumbW - 16}
-                fontSize={10}
-                fontFamily={titleLayer.fontFamily}
-                fontStyle={titleLayer.fontWeight >= 700 ? "bold" : "normal"}
-                fill={titleLayer.color}
-                align={titleLayer.align}
-              />
-            )}
-
-            {/* Mini device frame */}
-            <Rect
-              x={thumbW * 0.2}
-              y={thumbH * 0.25}
-              width={thumbW * 0.6}
-              height={thumbH * 0.6}
-              cornerRadius={6}
-              fill="#1a1a1a"
-              stroke="#333"
-              strokeWidth={0.5}
-            />
-            <Rect
-              x={thumbW * 0.22}
-              y={thumbH * 0.27}
-              width={thumbW * 0.56}
-              height={thumbH * 0.56}
-              cornerRadius={4}
-              fill="#000"
-            />
+            {slide.layers.map((layer) => {
+              switch (layer.type) {
+                case "background":
+                  return (
+                    <ThumbBackground
+                      key={layer.id}
+                      layer={layer}
+                      width={thumbW}
+                      height={thumbH}
+                    />
+                  );
+                case "title":
+                  return (
+                    <ThumbTitle
+                      key={layer.id}
+                      layer={layer}
+                      canvasWidth={thumbW}
+                      canvasHeight={thumbH}
+                    />
+                  );
+                case "device":
+                  return (
+                    <ThumbDevice
+                      key={layer.id}
+                      layer={layer}
+                      canvasWidth={thumbW}
+                      canvasHeight={thumbH}
+                    />
+                  );
+                case "image":
+                  return (
+                    <ThumbImage
+                      key={layer.id}
+                      layer={layer}
+                      canvasWidth={thumbW}
+                      canvasHeight={thumbH}
+                    />
+                  );
+                default:
+                  return null;
+              }
+            })}
           </Layer>
         </Stage>
 
@@ -167,6 +422,10 @@ function SlideThumbnail({
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Slide strip
+// ---------------------------------------------------------------------------
 
 export default function SlideStrip() {
   const project = useEditorStore((s) => s.project);
