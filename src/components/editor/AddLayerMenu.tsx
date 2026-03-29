@@ -8,9 +8,18 @@ import {
   Type,
   Smartphone,
   Image,
+  Shapes,
+  TextCursor,
+  Sticker,
 } from "lucide-react";
 import useEditorStore from "@/lib/store";
-import { createDefaultDeviceLayer } from "@/lib/layerDefaults";
+import {
+  createDefaultDeviceLayer,
+  createDefaultShapeLayer,
+  createDefaultTextBlockLayer,
+  createDefaultIconLayer,
+} from "@/lib/layerDefaults";
+import { ICON_LIBRARY } from "@/lib/iconLibrary";
 import {
   BackgroundLayer,
   TitleLayer,
@@ -80,6 +89,24 @@ const LAYER_OPTIONS = [
       height: 200,
       opacity: 1,
     }),
+  },
+  {
+    type: "shape" as const,
+    label: "Shape",
+    icon: Shapes,
+    create: () => createDefaultShapeLayer(),
+  },
+  {
+    type: "textblock" as const,
+    label: "Text Block",
+    icon: TextCursor,
+    create: () => createDefaultTextBlockLayer(),
+  },
+  {
+    type: "icon" as const,
+    label: "Icon",
+    icon: Sticker,
+    create: () => createDefaultIconLayer(ICON_LIBRARY[0]?.svg ?? ""),
   },
 ];
 

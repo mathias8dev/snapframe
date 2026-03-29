@@ -15,11 +15,15 @@ import {
 import useEditorStore from "@/lib/store";
 import { DEVICE_LIST } from "@/lib/deviceConfigs";
 import { storeImageFile, isIdbUrl, loadImageAsObjectURL } from "@/lib/imageStore";
+import { ICON_LIBRARY, ICON_CATEGORIES } from "@/lib/iconLibrary";
 import {
   BackgroundLayer,
   TitleLayer,
   DeviceLayer,
   ImageLayer,
+  ShapeLayer,
+  TextBlockLayer,
+  IconLayer,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -630,6 +634,254 @@ function ImageControls({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Shape controls
+// ---------------------------------------------------------------------------
+
+const SHAPE_TYPES: { value: ShapeLayer["shapeType"]; label: string }[] = [
+  { value: "rect", label: "Rect" },
+  { value: "circle", label: "Circle" },
+  { value: "triangle", label: "Triangle" },
+  { value: "star", label: "Star" },
+  { value: "line", label: "Line" },
+  { value: "arrow", label: "Arrow" },
+];
+
+function ShapeControls({ layer, slideId }: { layer: ShapeLayer; slideId: string }) {
+  const updateLayer = useEditorStore((s) => s.updateLayer);
+  const reorderLayers = useEditorStore((s) => s.reorderLayers);
+  const project = useEditorStore((s) => s.project);
+  const activeSlideId = useEditorStore((s) => s.activeSlideId);
+  const update = (patch: Partial<ShapeLayer>) => updateLayer(slideId, layer.id, patch);
+  const slide = project?.slides.find((s) => s.id === activeSlideId);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs text-muted">Shape</span>
+        <div className="grid grid-cols-3 gap-1">
+          {SHAPE_TYPES.map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => update({ shapeType: value })}
+              className={cn(
+                "py-1.5 rounded-md text-[10px] capitalize",
+                layer.shapeType === value
+                  ? "bg-accent text-white"
+                  : "bg-surface text-muted hover:text-foreground"
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <ColorPickerControl label="Fill" value={layer.fill} onChange={(v) => update({ fill: v })} />
+      <ColorPickerControl label="Stroke" value={layer.stroke} onChange={(v) => update({ stroke: v })} />
+
+      <SliderControl label="Stroke Width" value={layer.strokeWidth} min={0} max={20} onChange={(v) => update({ strokeWidth: v })} />
+      <SliderControl label="Opacity" value={Math.round(layer.opacity * 100)} min={0} max={100} onChange={(v) => update({ opacity: v / 100 })} />
+      <SliderControl label="Rotation" value={layer.rotation} min={-180} max={180} onChange={(v) => update({ rotation: v })} />
+
+      <div className="grid grid-cols-2 gap-2">
+        {([
+          { label: "X", key: "x" as const, value: layer.x },
+          { label: "Y", key: "y" as const, value: layer.y },
+          { label: "Width", key: "width" as const, value: layer.width },
+          { label: "Height", key: "height" as const, value: layer.height },
+        ]).map(({ label, key, value }) => (
+          <div key={key} className="flex flex-col gap-1">
+            <span className="text-xs text-muted">{label}</span>
+            <input type="number" value={Math.round(value)} onChange={(e) => update({ [key]: Number(e.target.value) })}
+              className="bg-surface border border-border rounded-md px-2 py-1 text-xs text-foreground" />
+          </div>
+        ))}
+      </div>
+
+      <div className="flex gap-1">
+        <button onClick={() => { if (!slide) return; const idx = slide.layers.findIndex((l) => l.id === layer.id); if (idx > 0) reorderLayers(slideId, idx, 0); }}
+          className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-surface text-muted hover:text-foreground rounded-md text-xs">
+          <ArrowDown size={12} /> Send to Back
+        </button>
+        <button onClick={() => { if (!slide) return; const idx = slide.layers.findIndex((l) => l.id === layer.id); if (idx < slide.layers.length - 1) reorderLayers(slideId, idx, slide.layers.length - 1); }}
+          className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-surface text-muted hover:text-foreground rounded-md text-xs">
+          <ArrowUp size={12} /> Bring to Front
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// TextBlock controls
+// ---------------------------------------------------------------------------
+
+function TextBlockControls({ layer, slideId }: { layer: TextBlockLayer; slideId: string }) {
+  const updateLayer = useEditorStore((s) => s.updateLayer);
+  const update = (patch: Partial<TextBlockLayer>) => updateLayer(slideId, layer.id, patch);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs text-muted">Text</span>
+        <textarea value={layer.text} onChange={(e) => update({ text: e.target.value })} rows={3}
+          className="bg-surface border border-border rounded-md px-2 py-1.5 text-sm text-foreground resize-none" />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs text-muted">Font Family</span>
+        <select value={layer.fontFamily} onChange={(e) => update({ fontFamily: e.target.value })}
+          className="bg-surface border border-border rounded-md px-2 py-1.5 text-sm text-foreground">
+          {FONTS.map((f) => <option key={f} value={f}>{f}</option>)}
+        </select>
+      </div>
+
+      <SliderControl label="Font Size" value={layer.fontSize} min={8} max={200} onChange={(v) => update({ fontSize: v })} />
+
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs text-muted">Font Weight</span>
+        <select value={layer.fontWeight} onChange={(e) => update({ fontWeight: Number(e.target.value) })}
+          className="bg-surface border border-border rounded-md px-2 py-1.5 text-sm text-foreground">
+          {[300, 400, 500, 600, 700, 800, 900].map((w) => <option key={w} value={w}>{w}</option>)}
+        </select>
+      </div>
+
+      <ColorPickerControl label="Color" value={layer.color} onChange={(v) => update({ color: v })} />
+
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs text-muted">Background</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => update({ backgroundColor: layer.backgroundColor ? null : "#00000066" })}
+            className={cn("px-2 py-1 rounded-md text-xs", layer.backgroundColor ? "bg-accent text-white" : "bg-surface text-muted")}
+          >
+            {layer.backgroundColor ? "On" : "Off"}
+          </button>
+          {layer.backgroundColor && (
+            <input type="text" value={layer.backgroundColor} onChange={(e) => update({ backgroundColor: e.target.value })}
+              className="flex-1 bg-surface border border-border rounded-md px-2 py-1 text-xs text-foreground" />
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs text-muted">Alignment</span>
+        <div className="flex gap-1">
+          {([
+            { value: "left", icon: AlignLeft },
+            { value: "center", icon: AlignCenter },
+            { value: "right", icon: AlignRight },
+          ] as const).map(({ value, icon: Icon }) => (
+            <button key={value} onClick={() => update({ align: value })}
+              className={cn("flex-1 flex justify-center py-1.5 rounded-md", layer.align === value ? "bg-accent text-white" : "bg-surface text-muted hover:text-foreground")}>
+              <Icon size={14} />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <SliderControl label="Opacity" value={Math.round(layer.opacity * 100)} min={0} max={100} onChange={(v) => update({ opacity: v / 100 })} />
+
+      <div className="grid grid-cols-2 gap-2">
+        {([
+          { label: "X", key: "x" as const, value: layer.x },
+          { label: "Y", key: "y" as const, value: layer.y },
+          { label: "Width", key: "width" as const, value: layer.width },
+        ]).map(({ label, key, value }) => (
+          <div key={key} className="flex flex-col gap-1">
+            <span className="text-xs text-muted">{label}</span>
+            <input type="number" value={Math.round(value)} onChange={(e) => update({ [key]: Number(e.target.value) })}
+              className="bg-surface border border-border rounded-md px-2 py-1 text-xs text-foreground" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Icon controls
+// ---------------------------------------------------------------------------
+
+function IconControls({ layer, slideId }: { layer: IconLayer; slideId: string }) {
+  const updateLayer = useEditorStore((s) => s.updateLayer);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showPicker, setShowPicker] = useState(false);
+  const [iconSearch, setIconSearch] = useState("");
+  const [iconCategory, setIconCategory] = useState("All");
+  const update = (patch: Partial<IconLayer>) => updateLayer(slideId, layer.id, patch);
+
+  const filteredIcons = ICON_LIBRARY.filter((ic) => {
+    if (iconCategory !== "All" && ic.category !== iconCategory) return false;
+    if (iconSearch && !ic.name.toLowerCase().includes(iconSearch.toLowerCase())) return false;
+    return true;
+  });
+
+  const handleSvgUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    if (text.includes("<svg")) update({ svgContent: text });
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <button onClick={() => setShowPicker(!showPicker)}
+        className="w-full flex items-center justify-center gap-2 py-2 bg-accent hover:bg-accent-hover text-white rounded-md text-sm transition-colors">
+        {showPicker ? "Close Picker" : "Choose Icon"}
+      </button>
+
+      {showPicker && (
+        <div className="flex flex-col gap-2 border border-border rounded-lg p-2 bg-background max-h-[300px]">
+          <input type="text" placeholder="Search icons..." value={iconSearch} onChange={(e) => setIconSearch(e.target.value)}
+            className="bg-surface border border-border rounded-md px-2 py-1 text-xs text-foreground" />
+          <div className="flex gap-1 flex-wrap">
+            <button onClick={() => setIconCategory("All")}
+              className={cn("px-2 py-0.5 rounded text-[10px]", iconCategory === "All" ? "bg-accent text-white" : "bg-surface text-muted")}>All</button>
+            {ICON_CATEGORIES.map((cat) => (
+              <button key={cat} onClick={() => setIconCategory(cat)}
+                className={cn("px-2 py-0.5 rounded text-[10px]", iconCategory === cat ? "bg-accent text-white" : "bg-surface text-muted")}>{cat}</button>
+            ))}
+          </div>
+          <div className="grid grid-cols-6 gap-1 overflow-y-auto max-h-[180px]">
+            {filteredIcons.map((ic) => (
+              <button key={ic.name} title={ic.name} onClick={() => { update({ svgContent: ic.svg }); setShowPicker(false); }}
+                className="w-9 h-9 flex items-center justify-center rounded hover:bg-white/10 transition-colors"
+                dangerouslySetInnerHTML={{ __html: ic.svg.replace('stroke="currentColor"', 'stroke="#a1a1aa"').replace('width="24"', 'width="18"').replace('height="24"', 'height="18"') }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      <button onClick={() => fileInputRef.current?.click()}
+        className="w-full flex items-center justify-center gap-2 py-1.5 bg-surface border border-border text-muted hover:text-foreground rounded-md text-xs transition-colors">
+        <Upload size={12} /> Upload SVG
+      </button>
+      <input ref={fileInputRef} type="file" accept=".svg" className="hidden" onChange={handleSvgUpload} />
+
+      <ColorPickerControl label="Color" value={layer.fill} onChange={(v) => update({ fill: v })} />
+      <SliderControl label="Size" value={layer.size} min={16} max={256} onChange={(v) => update({ size: v })} />
+      <SliderControl label="Opacity" value={Math.round(layer.opacity * 100)} min={0} max={100} onChange={(v) => update({ opacity: v / 100 })} />
+      <SliderControl label="Rotation" value={layer.rotation} min={-180} max={180} onChange={(v) => update({ rotation: v })} />
+
+      <div className="grid grid-cols-2 gap-2">
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-muted">X</span>
+          <input type="number" value={Math.round(layer.x)} onChange={(e) => update({ x: Number(e.target.value) })}
+            className="bg-surface border border-border rounded-md px-2 py-1 text-xs text-foreground" />
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-muted">Y</span>
+          <input type="number" value={Math.round(layer.y)} onChange={(e) => update({ y: Number(e.target.value) })}
+            className="bg-surface border border-border rounded-md px-2 py-1 text-xs text-foreground" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function LayerControls() {
   const project = useEditorStore((s) => s.project);
   const activeSlideId = useEditorStore((s) => s.activeSlideId);
@@ -663,6 +915,15 @@ export default function LayerControls() {
         )}
         {layer.type === "image" && (
           <ImageControls layer={layer} slideId={slide.id} />
+        )}
+        {layer.type === "shape" && (
+          <ShapeControls layer={layer} slideId={slide.id} />
+        )}
+        {layer.type === "textblock" && (
+          <TextBlockControls layer={layer} slideId={slide.id} />
+        )}
+        {layer.type === "icon" && (
+          <IconControls layer={layer} slideId={slide.id} />
         )}
       </div>
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useState, useCallback } from "react";
-import { Stage, Layer, Rect, Text, Group, Image as KonvaImage } from "react-konva";
+import { Stage, Layer, Rect, Text, Group, Image as KonvaImage, Ellipse, RegularPolygon, Star, Line, Arrow, Transformer } from "react-konva";
 import Konva from "konva";
 import useEditorStore from "@/lib/store";
 import { DEVICES } from "@/lib/deviceConfigs";
@@ -16,11 +16,15 @@ import {
   NOTCH,
 } from "@/lib/deviceGeometry";
 import { useLoadImage } from "@/lib/useLoadImage";
+import { useLoadSvgImage } from "@/lib/useLoadSvgImage";
 import {
   BackgroundLayer,
   TitleLayer,
   DeviceLayer,
   ImageLayer,
+  ShapeLayer,
+  TextBlockLayer,
+  IconLayer,
 } from "@/lib/types";
 
 function BackgroundRenderer({
@@ -287,6 +291,178 @@ function ImageRenderer({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Shape renderer
+// ---------------------------------------------------------------------------
+
+function ShapeRenderer({
+  layer, canvasWidth, canvasHeight, onSelect, isSelected, slideId, nodeRef,
+}: {
+  layer: ShapeLayer; canvasWidth: number; canvasHeight: number;
+  onSelect: () => void; isSelected: boolean; slideId: string;
+  nodeRef: (node: Konva.Node | null) => void;
+}) {
+  const updateLayer = useEditorStore((s) => s.updateLayer);
+  if (!layer.visible) return null;
+
+  const common = {
+    opacity: layer.opacity,
+    fill: layer.fill,
+    stroke: isSelected ? "#7c3aed" : layer.stroke || undefined,
+    strokeWidth: isSelected ? 2 : layer.strokeWidth,
+    rotation: layer.rotation,
+    draggable: !layer.locked,
+    onClick: onSelect,
+    onTap: onSelect,
+    onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => {
+      updateLayer(slideId, layer.id, { x: e.target.x(), y: e.target.y() });
+    },
+    onTransformEnd: (e: Konva.KonvaEventObject<Event>) => {
+      const node = e.target;
+      updateLayer(slideId, layer.id, {
+        x: node.x(), y: node.y(),
+        width: Math.max(5, node.width() * node.scaleX()),
+        height: Math.max(5, node.height() * node.scaleY()),
+        rotation: node.rotation(),
+      });
+      node.scaleX(1);
+      node.scaleY(1);
+    },
+  };
+
+  const setRef = (n: Konva.Node | null) => nodeRef(n);
+
+  switch (layer.shapeType) {
+    case "rect":
+      return <Rect ref={setRef} x={layer.x} y={layer.y} width={layer.width} height={layer.height} {...common} />;
+    case "circle":
+      return <Ellipse ref={setRef} x={layer.x + layer.width / 2} y={layer.y + layer.height / 2} radiusX={layer.width / 2} radiusY={layer.height / 2} {...common} offsetX={0} offsetY={0}
+        onDragEnd={(e) => { updateLayer(slideId, layer.id, { x: e.target.x() - layer.width / 2, y: e.target.y() - layer.height / 2 }); }}
+        onTransformEnd={(e) => {
+          const n = e.target as Konva.Ellipse;
+          const w = Math.max(5, n.radiusX() * 2 * n.scaleX());
+          const h = Math.max(5, n.radiusY() * 2 * n.scaleY());
+          updateLayer(slideId, layer.id, { x: n.x() - w / 2, y: n.y() - h / 2, width: w, height: h, rotation: n.rotation() });
+          n.scaleX(1); n.scaleY(1);
+        }}
+      />;
+    case "triangle":
+      return <RegularPolygon ref={setRef} x={layer.x + layer.width / 2} y={layer.y + layer.height / 2} sides={3} radius={Math.min(layer.width, layer.height) / 2} {...common}
+        onDragEnd={(e) => { updateLayer(slideId, layer.id, { x: e.target.x() - layer.width / 2, y: e.target.y() - layer.height / 2 }); }}
+        onTransformEnd={(e) => {
+          const n = e.target; const s = Math.max(n.scaleX(), n.scaleY());
+          const sz = Math.max(10, Math.min(layer.width, layer.height) * s);
+          updateLayer(slideId, layer.id, { x: n.x() - sz / 2, y: n.y() - sz / 2, width: sz, height: sz, rotation: n.rotation() });
+          n.scaleX(1); n.scaleY(1);
+        }}
+      />;
+    case "star":
+      return <Star ref={setRef} x={layer.x + layer.width / 2} y={layer.y + layer.height / 2} numPoints={5} innerRadius={Math.min(layer.width, layer.height) / 4} outerRadius={Math.min(layer.width, layer.height) / 2} {...common}
+        onDragEnd={(e) => { updateLayer(slideId, layer.id, { x: e.target.x() - layer.width / 2, y: e.target.y() - layer.height / 2 }); }}
+        onTransformEnd={(e) => {
+          const n = e.target; const s = Math.max(n.scaleX(), n.scaleY());
+          const sz = Math.max(10, Math.min(layer.width, layer.height) * s);
+          updateLayer(slideId, layer.id, { x: n.x() - sz / 2, y: n.y() - sz / 2, width: sz, height: sz, rotation: n.rotation() });
+          n.scaleX(1); n.scaleY(1);
+        }}
+      />;
+    case "line":
+      return <Line ref={setRef} points={[0, 0, layer.width, layer.height]} x={layer.x} y={layer.y} stroke={isSelected ? "#7c3aed" : layer.stroke || layer.fill} strokeWidth={layer.strokeWidth || 2} opacity={layer.opacity} draggable={!layer.locked} onClick={onSelect} onTap={onSelect}
+        onDragEnd={(e) => { updateLayer(slideId, layer.id, { x: e.target.x(), y: e.target.y() }); }}
+      />;
+    case "arrow":
+      return <Arrow ref={setRef} points={[0, 0, layer.width, layer.height]} x={layer.x} y={layer.y} fill={layer.fill} stroke={isSelected ? "#7c3aed" : layer.stroke || layer.fill} strokeWidth={layer.strokeWidth || 2} opacity={layer.opacity} draggable={!layer.locked} onClick={onSelect} onTap={onSelect}
+        onDragEnd={(e) => { updateLayer(slideId, layer.id, { x: e.target.x(), y: e.target.y() }); }}
+      />;
+    default:
+      return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// TextBlock renderer
+// ---------------------------------------------------------------------------
+
+function TextBlockRenderer({
+  layer, onSelect, isSelected, slideId, nodeRef,
+}: {
+  layer: TextBlockLayer; onSelect: () => void; isSelected: boolean; slideId: string;
+  nodeRef: (node: Konva.Node | null) => void;
+}) {
+  const updateLayer = useEditorStore((s) => s.updateLayer);
+  if (!layer.visible) return null;
+
+  return (
+    <Group
+      x={layer.x} y={layer.y}
+      draggable={!layer.locked}
+      onClick={onSelect} onTap={onSelect}
+      opacity={layer.opacity}
+      onDragEnd={(e) => { updateLayer(slideId, layer.id, { x: e.target.x(), y: e.target.y() }); }}
+    >
+      {layer.backgroundColor && (
+        <Rect width={layer.width} height={layer.fontSize * 3} fill={layer.backgroundColor} cornerRadius={4} />
+      )}
+      <Text
+        ref={(n) => nodeRef(n)}
+        text={layer.text}
+        width={layer.width}
+        fontSize={layer.fontSize}
+        fontFamily={layer.fontFamily}
+        fontStyle={layer.fontWeight >= 700 ? "bold" : "normal"}
+        fill={layer.color}
+        align={layer.align}
+        stroke={isSelected ? "#7c3aed" : undefined}
+        strokeWidth={isSelected ? 0.5 : 0}
+        onTransformEnd={(e) => {
+          const node = e.target;
+          updateLayer(slideId, layer.id, {
+            width: Math.max(20, node.width() * node.scaleX()),
+          });
+          node.scaleX(1); node.scaleY(1);
+        }}
+      />
+    </Group>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Icon renderer
+// ---------------------------------------------------------------------------
+
+function IconRenderer({
+  layer, onSelect, isSelected, slideId, nodeRef,
+}: {
+  layer: IconLayer; onSelect: () => void; isSelected: boolean; slideId: string;
+  nodeRef: (node: Konva.Node | null) => void;
+}) {
+  const updateLayer = useEditorStore((s) => s.updateLayer);
+  const image = useLoadSvgImage(layer.svgContent, layer.fill);
+  if (!layer.visible || !image) return null;
+
+  return (
+    <KonvaImage
+      ref={(n) => nodeRef(n)}
+      image={image}
+      x={layer.x} y={layer.y}
+      width={layer.size} height={layer.size}
+      rotation={layer.rotation}
+      opacity={layer.opacity}
+      draggable={!layer.locked}
+      onClick={onSelect} onTap={onSelect}
+      stroke={isSelected ? "#7c3aed" : undefined}
+      strokeWidth={isSelected ? 2 : 0}
+      onDragEnd={(e) => { updateLayer(slideId, layer.id, { x: e.target.x(), y: e.target.y() }); }}
+      onTransformEnd={(e) => {
+        const node = e.target;
+        const newSize = Math.max(8, layer.size * Math.max(node.scaleX(), node.scaleY()));
+        updateLayer(slideId, layer.id, { x: node.x(), y: node.y(), size: newSize, rotation: node.rotation() });
+        node.scaleX(1); node.scaleY(1);
+      }}
+    />
+  );
+}
+
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 3;
 const ZOOM_STEP = 0.1;
@@ -298,12 +474,32 @@ export default function Canvas() {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const isPanning = useRef(false);
   const panStart = useRef({ x: 0, y: 0 });
+  const transformerRef = useRef<Konva.Transformer>(null);
+  const nodeRefs = useRef(new Map<string, Konva.Node>());
   const project = useEditorStore((s) => s.project);
   const activeSlideId = useEditorStore((s) => s.activeSlideId);
   const activeLayerId = useEditorStore((s) => s.activeLayerId);
   const setActiveLayer = useEditorStore((s) => s.setActiveLayer);
 
   const slide = project?.slides.find((s) => s.id === activeSlideId);
+
+  // Attach Transformer to the selected node
+  const TRANSFORMABLE_TYPES = new Set(["image", "shape", "textblock", "icon"]);
+  useEffect(() => {
+    const tr = transformerRef.current;
+    if (!tr) return;
+    const activeLayer = slide?.layers.find((l) => l.id === activeLayerId);
+    if (activeLayerId && activeLayer && TRANSFORMABLE_TYPES.has(activeLayer.type)) {
+      const node = nodeRefs.current.get(activeLayerId);
+      if (node) {
+        tr.nodes([node]);
+        tr.getLayer()?.batchDraw();
+        return;
+      }
+    }
+    tr.nodes([]);
+    tr.getLayer()?.batchDraw();
+  }, [activeLayerId, activeSlideId, slide]);
 
   const updateDimensions = useCallback(() => {
     if (!containerRef.current) return;
@@ -477,10 +673,58 @@ export default function Canvas() {
                       slideId={slide.id}
                     />
                   );
+                case "shape":
+                  return (
+                    <ShapeRenderer
+                      key={layer.id}
+                      layer={layer}
+                      canvasWidth={dimensions.width}
+                      canvasHeight={dimensions.height}
+                      onSelect={() => setActiveLayer(layer.id)}
+                      isSelected={isSelected}
+                      slideId={slide.id}
+                      nodeRef={(n) => { if (n) nodeRefs.current.set(layer.id, n); else nodeRefs.current.delete(layer.id); }}
+                    />
+                  );
+                case "textblock":
+                  return (
+                    <TextBlockRenderer
+                      key={layer.id}
+                      layer={layer}
+                      onSelect={() => setActiveLayer(layer.id)}
+                      isSelected={isSelected}
+                      slideId={slide.id}
+                      nodeRef={(n) => { if (n) nodeRefs.current.set(layer.id, n); else nodeRefs.current.delete(layer.id); }}
+                    />
+                  );
+                case "icon":
+                  return (
+                    <IconRenderer
+                      key={layer.id}
+                      layer={layer}
+                      onSelect={() => setActiveLayer(layer.id)}
+                      isSelected={isSelected}
+                      slideId={slide.id}
+                      nodeRef={(n) => { if (n) nodeRefs.current.set(layer.id, n); else nodeRefs.current.delete(layer.id); }}
+                    />
+                  );
                 default:
                   return null;
               }
             })}
+            <Transformer
+              ref={transformerRef}
+              boundBoxFunc={(_, newBox) => ({
+                ...newBox,
+                width: Math.max(5, newBox.width),
+                height: Math.max(5, newBox.height),
+              })}
+              anchorSize={8}
+              anchorCornerRadius={2}
+              borderStroke="#7c3aed"
+              anchorStroke="#7c3aed"
+              anchorFill="#ffffff"
+            />
           </Layer>
         </Stage>
       </div>

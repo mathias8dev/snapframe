@@ -26,11 +26,15 @@ import {
   DYNAMIC_ISLAND,
   NOTCH,
 } from "@/lib/deviceGeometry";
+import { tintSvg, svgToImage } from "@/lib/iconUtils";
 import {
   BackgroundLayer,
   TitleLayer,
   DeviceLayer,
   ImageLayer,
+  ShapeLayer,
+  TextBlockLayer,
+  IconLayer,
   Slide,
 } from "@/lib/types";
 import { SlideLayerRenderer, CANVAS_BG } from "@/components/editor/SlidePreview";
@@ -244,6 +248,16 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
           })
         );
 
+        // Pre-load icon SVGs as images
+        for (const layer of slide.layers) {
+          if (layer.type === "icon" && layer.svgContent) {
+            try {
+              const key = `icon:${layer.id}`;
+              imageCache.set(key, await svgToImage(tintSvg(layer.svgContent, layer.fill)));
+            } catch { /* skip broken SVGs */ }
+          }
+        }
+
         // Draw layers in order (same order as Canvas.tsx)
         for (const layer of slide.layers) {
           if (!layer.visible) continue;
@@ -391,6 +405,155 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
               const imgW = (il.width || REF_W * 0.5) * scaleX;
               const imgH = (il.height || REF_H * 0.5) * scaleY;
               ctx.drawImage(img, il.x * scaleX, il.y * scaleY, imgW, imgH);
+              ctx.restore();
+              break;
+            }
+
+            case "shape": {
+              const sl = layer as ShapeLayer;
+              ctx.save();
+              ctx.globalAlpha = sl.opacity;
+              const sx = sl.x * scaleX, sy = sl.y * scaleY;
+              const sw = sl.width * scaleX, sh = sl.height * scaleY;
+              const cx = sx + sw / 2, cy = sy + sh / 2;
+
+              // Apply rotation
+              if (sl.rotation) {
+                ctx.translate(cx, cy);
+                ctx.rotate((sl.rotation * Math.PI) / 180);
+                ctx.translate(-cx, -cy);
+              }
+
+              ctx.fillStyle = sl.fill;
+              ctx.strokeStyle = sl.stroke;
+              ctx.lineWidth = sl.strokeWidth * scaleX;
+
+              switch (sl.shapeType) {
+                case "rect":
+                  ctx.fillRect(sx, sy, sw, sh);
+                  if (sl.strokeWidth > 0) ctx.strokeRect(sx, sy, sw, sh);
+                  break;
+                case "circle":
+                  ctx.beginPath();
+                  ctx.ellipse(cx, cy, sw / 2, sh / 2, 0, 0, Math.PI * 2);
+                  ctx.fill();
+                  if (sl.strokeWidth > 0) ctx.stroke();
+                  break;
+                case "triangle": {
+                  const r = Math.min(sw, sh) / 2;
+                  ctx.beginPath();
+                  for (let i = 0; i < 3; i++) {
+                    const angle = (i * 2 * Math.PI) / 3 - Math.PI / 2;
+                    const px = cx + r * Math.cos(angle);
+                    const py = cy + r * Math.sin(angle);
+                    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+                  }
+                  ctx.closePath();
+                  ctx.fill();
+                  if (sl.strokeWidth > 0) ctx.stroke();
+                  break;
+                }
+                case "star": {
+                  const outerR = Math.min(sw, sh) / 2;
+                  const innerR = outerR / 2;
+                  ctx.beginPath();
+                  for (let i = 0; i < 10; i++) {
+                    const r2 = i % 2 === 0 ? outerR : innerR;
+                    const angle = (i * Math.PI) / 5 - Math.PI / 2;
+                    const px = cx + r2 * Math.cos(angle);
+                    const py = cy + r2 * Math.sin(angle);
+                    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+                  }
+                  ctx.closePath();
+                  ctx.fill();
+                  if (sl.strokeWidth > 0) ctx.stroke();
+                  break;
+                }
+                case "line":
+                  ctx.beginPath();
+                  ctx.moveTo(sx, sy);
+                  ctx.lineTo(sx + sw, sy + sh);
+                  ctx.strokeStyle = sl.stroke || sl.fill;
+                  ctx.lineWidth = (sl.strokeWidth || 2) * scaleX;
+                  ctx.stroke();
+                  break;
+                case "arrow": {
+                  const headLen = 10 * scaleX;
+                  const dx = sw, dy = sh;
+                  const angle = Math.atan2(dy, dx);
+                  ctx.beginPath();
+                  ctx.moveTo(sx, sy);
+                  ctx.lineTo(sx + sw, sy + sh);
+                  ctx.strokeStyle = sl.stroke || sl.fill;
+                  ctx.lineWidth = (sl.strokeWidth || 2) * scaleX;
+                  ctx.stroke();
+                  ctx.beginPath();
+                  ctx.moveTo(sx + sw, sy + sh);
+                  ctx.lineTo(sx + sw - headLen * Math.cos(angle - Math.PI / 6), sy + sh - headLen * Math.sin(angle - Math.PI / 6));
+                  ctx.moveTo(sx + sw, sy + sh);
+                  ctx.lineTo(sx + sw - headLen * Math.cos(angle + Math.PI / 6), sy + sh - headLen * Math.sin(angle + Math.PI / 6));
+                  ctx.stroke();
+                  break;
+                }
+              }
+              ctx.restore();
+              break;
+            }
+
+            case "textblock": {
+              const tbl = layer as TextBlockLayer;
+              ctx.save();
+              ctx.globalAlpha = tbl.opacity;
+              const tx = tbl.x * scaleX, ty = tbl.y * scaleY;
+              const tw = tbl.width * scaleX;
+              const fontSize = tbl.fontSize * scaleX;
+
+              if (tbl.backgroundColor) {
+                ctx.fillStyle = tbl.backgroundColor;
+                ctx.fillRect(tx, ty, tw, fontSize * 3);
+              }
+
+              ctx.font = `${tbl.fontWeight >= 700 ? "bold" : "normal"} ${fontSize}px ${tbl.fontFamily}`;
+              ctx.fillStyle = tbl.color;
+              ctx.textAlign = tbl.align;
+
+              const textX = tbl.align === "center" ? tx + tw / 2 : tbl.align === "right" ? tx + tw : tx;
+
+              // Word-wrap
+              const words = tbl.text.split(" ");
+              let line = "";
+              let lineY = ty + fontSize;
+              for (const word of words) {
+                const testLine = line ? `${line} ${word}` : word;
+                const metrics = ctx.measureText(testLine);
+                if (metrics.width > tw && line) {
+                  ctx.fillText(line, textX, lineY);
+                  line = word;
+                  lineY += fontSize * 1.3;
+                } else {
+                  line = testLine;
+                }
+              }
+              if (line) ctx.fillText(line, textX, lineY);
+
+              ctx.restore();
+              break;
+            }
+
+            case "icon": {
+              const icl = layer as IconLayer;
+              const iconImg = imageCache.get(`icon:${icl.id}`);
+              if (!iconImg) break;
+              ctx.save();
+              ctx.globalAlpha = icl.opacity;
+              const ix = icl.x * scaleX, iy = icl.y * scaleY;
+              const isz = icl.size * scaleX;
+              if (icl.rotation) {
+                ctx.translate(ix + isz / 2, iy + isz / 2);
+                ctx.rotate((icl.rotation * Math.PI) / 180);
+                ctx.translate(-(ix + isz / 2), -(iy + isz / 2));
+              }
+              ctx.drawImage(iconImg, ix, iy, isz, isz);
               ctx.restore();
               break;
             }

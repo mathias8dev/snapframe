@@ -28,6 +28,9 @@ import {
   Smartphone,
   Paintbrush,
   Layers,
+  Shapes,
+  TextCursor,
+  Sticker,
 } from "lucide-react";
 import useEditorStore from "@/lib/store";
 import { Layer } from "@/lib/types";
@@ -39,6 +42,9 @@ const layerIcons: Record<string, React.ElementType> = {
   device: Smartphone,
   image: Image,
   layout: Layers,
+  shape: Shapes,
+  textblock: TextCursor,
+  icon: Sticker,
 };
 
 function SortableLayerItem({

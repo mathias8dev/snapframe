@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Rect, Text, Group, Image as KonvaImage } from "react-konva";
+import { Rect, Text, Group, Image as KonvaImage, Ellipse, RegularPolygon, Star, Line, Arrow } from "react-konva";
 import Konva from "konva";
 import { DEVICES } from "@/lib/deviceConfigs";
 import {
@@ -17,11 +17,15 @@ import {
   NOTCH,
 } from "@/lib/deviceGeometry";
 import { useLoadImage } from "@/lib/useLoadImage";
+import { useLoadSvgImage } from "@/lib/useLoadSvgImage";
 import {
   BackgroundLayer,
   TitleLayer,
   DeviceLayer,
   ImageLayer,
+  ShapeLayer,
+  TextBlockLayer,
+  IconLayer,
   Layer,
 } from "@/lib/types";
 
@@ -170,6 +174,80 @@ function ReadOnlyImage({ layer, canvasWidth, canvasHeight }: { layer: ImageLayer
 }
 
 // ---------------------------------------------------------------------------
+// Shape (read-only)
+// ---------------------------------------------------------------------------
+
+function ReadOnlyShape({ layer, canvasWidth, canvasHeight }: { layer: ShapeLayer; canvasWidth: number; canvasHeight: number }) {
+  if (!layer.visible) return null;
+  const sx = canvasWidth / REF_W;
+  const sy = canvasHeight / REF_H;
+  const x = layer.x * sx, y = layer.y * sy, w = layer.width * sx, h = layer.height * sy;
+
+  const common = { fill: layer.fill, stroke: layer.stroke || undefined, strokeWidth: layer.strokeWidth * sx, opacity: layer.opacity, rotation: layer.rotation, listening: false as const };
+
+  switch (layer.shapeType) {
+    case "rect":
+      return <Rect x={x} y={y} width={w} height={h} {...common} />;
+    case "circle":
+      return <Ellipse x={x + w / 2} y={y + h / 2} radiusX={w / 2} radiusY={h / 2} {...common} />;
+    case "triangle":
+      return <RegularPolygon x={x + w / 2} y={y + h / 2} sides={3} radius={Math.min(w, h) / 2} {...common} />;
+    case "star":
+      return <Star x={x + w / 2} y={y + h / 2} numPoints={5} innerRadius={Math.min(w, h) / 4} outerRadius={Math.min(w, h) / 2} {...common} />;
+    case "line":
+      return <Line points={[x, y, x + w, y + h]} stroke={layer.stroke || layer.fill} strokeWidth={(layer.strokeWidth || 2) * sx} opacity={layer.opacity} listening={false} />;
+    case "arrow":
+      return <Arrow points={[x, y, x + w, y + h]} fill={layer.fill} stroke={layer.stroke || layer.fill} strokeWidth={(layer.strokeWidth || 2) * sx} opacity={layer.opacity} listening={false} />;
+    default:
+      return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// TextBlock (read-only)
+// ---------------------------------------------------------------------------
+
+function ReadOnlyTextBlock({ layer, canvasWidth, canvasHeight }: { layer: TextBlockLayer; canvasWidth: number; canvasHeight: number }) {
+  if (!layer.visible) return null;
+  const sx = canvasWidth / REF_W;
+  const sy = canvasHeight / REF_H;
+
+  return (
+    <Group x={layer.x * sx} y={layer.y * sy} opacity={layer.opacity} listening={false}>
+      {layer.backgroundColor && (
+        <Rect width={layer.width * sx} height={layer.fontSize * sy * 3} fill={layer.backgroundColor} cornerRadius={4 * sx} />
+      )}
+      <Text
+        text={layer.text} width={layer.width * sx}
+        fontSize={layer.fontSize * sx}
+        fontFamily={layer.fontFamily}
+        fontStyle={layer.fontWeight >= 700 ? "bold" : "normal"}
+        fill={layer.color} align={layer.align} listening={false}
+      />
+    </Group>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Icon (read-only)
+// ---------------------------------------------------------------------------
+
+function ReadOnlyIcon({ layer, canvasWidth, canvasHeight }: { layer: IconLayer; canvasWidth: number; canvasHeight: number }) {
+  const image = useLoadSvgImage(layer.svgContent, layer.fill);
+  if (!layer.visible || !image) return null;
+  const sx = canvasWidth / REF_W;
+  const sy = canvasHeight / REF_H;
+  const sz = layer.size * sx;
+
+  return (
+    <KonvaImage image={image} x={layer.x * sx} y={layer.y * sy}
+      width={sz} height={sz} rotation={layer.rotation}
+      opacity={layer.opacity} listening={false}
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Public: renders all layers of a slide at the given dimensions
 // ---------------------------------------------------------------------------
 
@@ -188,6 +266,12 @@ export function SlideLayerRenderer({ layers, width, height }: { layers: Layer[];
             return <ReadOnlyDevice key={layer.id} layer={layer} canvasWidth={width} canvasHeight={height} />;
           case "image":
             return <ReadOnlyImage key={layer.id} layer={layer} canvasWidth={width} canvasHeight={height} />;
+          case "shape":
+            return <ReadOnlyShape key={layer.id} layer={layer} canvasWidth={width} canvasHeight={height} />;
+          case "textblock":
+            return <ReadOnlyTextBlock key={layer.id} layer={layer} canvasWidth={width} canvasHeight={height} />;
+          case "icon":
+            return <ReadOnlyIcon key={layer.id} layer={layer} canvasWidth={width} canvasHeight={height} />;
           default:
             return null;
         }

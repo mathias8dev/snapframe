@@ -18,7 +18,10 @@ export type Layer =
   | BackgroundLayer
   | TitleLayer
   | DeviceLayer
-  | ImageLayer;
+  | ImageLayer
+  | ShapeLayer
+  | TextBlockLayer
+  | IconLayer;
 
 export interface BaseLayer {
   id: string;
@@ -78,6 +81,46 @@ export interface ImageLayer extends BaseLayer {
   width: number;
   height: number;
   opacity: number;
+}
+
+export interface ShapeLayer extends BaseLayer {
+  type: "shape";
+  shapeType: "rect" | "circle" | "triangle" | "star" | "line" | "arrow";
+  fill: string;
+  stroke: string;
+  strokeWidth: number;
+  opacity: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+}
+
+export interface TextBlockLayer extends BaseLayer {
+  type: "textblock";
+  text: string;
+  fontSize: number;
+  fontFamily: string;
+  fontWeight: number;
+  color: string;
+  backgroundColor: string | null;
+  x: number;
+  y: number;
+  width: number;
+  align: "left" | "center" | "right";
+  opacity: number;
+}
+
+export interface IconLayer extends BaseLayer {
+  type: "icon";
+  svgContent: string;
+  fill: string;
+  x: number;
+  y: number;
+  size: number;
+  opacity: number;
+  rotation: number;
 }
 
 export interface DeviceConfig {
