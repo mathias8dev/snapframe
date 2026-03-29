@@ -12,6 +12,14 @@ const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-space
 export const metadata: Metadata = {
   title: "SnapFrame — App Store Screenshot Generator",
   description: "Create stunning App Store and Google Play screenshots with an intuitive editor",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({
