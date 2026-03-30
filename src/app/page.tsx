@@ -10,10 +10,14 @@ import {
   Zap,
   Monitor,
   Star,
+  Sun,
+  Moon,
 } from "lucide-react";
+import { useTheme } from "@/lib/useTheme";
 
 export default function Home() {
   const router = useRouter();
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <div className="min-h-screen bg-background">
@@ -37,6 +41,12 @@ export default function Home() {
             className="text-sm text-muted hover:text-foreground transition-colors"
           >
             Templates
+          </button>
+          <button
+            onClick={toggleTheme}
+            className="p-1.5 rounded-md text-muted hover:text-foreground transition-colors"
+          >
+            {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
           </button>
           <button
             onClick={() => router.push("/projects")}

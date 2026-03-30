@@ -8,7 +8,10 @@ import {
   Download,
   Save,
   ChevronLeft,
+  Sun,
+  Moon,
 } from "lucide-react";
+import { useTheme } from "@/lib/useTheme";
 import useEditorStore, {
   getStoredProjects,
   persistProject,
@@ -154,6 +157,8 @@ export default function EditorPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  const { theme, toggleTheme } = useTheme();
+
   if (!project) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -207,6 +212,13 @@ export default function EditorPage() {
             }
             className="bg-transparent border border-transparent hover:border-border focus:border-accent rounded-md px-2 py-1 text-sm text-foreground outline-none transition-colors max-w-[200px]"
           />
+          <button
+            onClick={toggleTheme}
+            className="p-1.5 rounded-md text-muted hover:text-foreground hover:bg-white/5 transition-colors"
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
           <button
             onClick={() => {
               if (project) {
