@@ -9,14 +9,14 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "#0f0f11",
-        surface: "#18181b",
-        border: "#27272a",
-        accent: "#7c3aed",
-        "accent-hover": "#6d28d9",
-        foreground: "#fafafa",
-        muted: "#a1a1aa",
-        canvas: "#09090b",
+        background: "var(--color-background)",
+        surface: "var(--color-surface)",
+        border: "var(--color-border)",
+        accent: "var(--color-accent)",
+        "accent-hover": "var(--color-accent-hover)",
+        foreground: "var(--color-foreground)",
+        muted: "var(--color-muted)",
+        canvas: "var(--color-canvas)",
       },
       fontFamily: {
         sans: ["DM Sans", "system-ui", "sans-serif"],

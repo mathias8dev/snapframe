@@ -464,6 +464,37 @@ function IconRenderer({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Snap guides
+// ---------------------------------------------------------------------------
+
+const SNAP_THRESHOLD = 5;
+
+interface GuideLine {
+  points: number[];
+  orientation: "h" | "v";
+}
+
+function getSnapLines(
+  canvasW: number,
+  canvasH: number,
+): { x: number[]; y: number[] } {
+  // Canvas center + edges
+  return {
+    x: [0, canvasW / 2, canvasW],
+    y: [0, canvasH / 2, canvasH],
+  };
+}
+
+function snapValue(value: number, targets: number[], threshold: number): { snapped: number; guide: number | null } {
+  for (const t of targets) {
+    if (Math.abs(value - t) < threshold) {
+      return { snapped: t, guide: t };
+    }
+  }
+  return { snapped: value, guide: null };
+}
+
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 3;
 const ZOOM_STEP = 0.1;
@@ -482,7 +513,56 @@ export default function Canvas() {
   const activeLayerId = useEditorStore((s) => s.activeLayerId);
   const setActiveLayer = useEditorStore((s) => s.setActiveLayer);
 
+  const [guides, setGuides] = useState<GuideLine[]>([]);
   const slide = project?.slides.find((s) => s.id === activeSlideId);
+
+  const handleDragMove = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
+    const node = e.target;
+    const box = node.getClientRect({ relativeTo: node.getLayer() ?? undefined });
+    const snapLines = getSnapLines(dimensions.width, dimensions.height);
+
+    const newGuides: GuideLine[] = [];
+
+    // Check left, center, right
+    const cx = box.x + box.width / 2;
+    const checkX = [
+      { val: box.x, offset: 0 },
+      { val: cx, offset: box.width / 2 },
+      { val: box.x + box.width, offset: box.width },
+    ];
+
+    for (const { val, offset } of checkX) {
+      const { snapped, guide } = snapValue(val, snapLines.x, SNAP_THRESHOLD);
+      if (guide !== null) {
+        node.x(node.x() + (snapped - val));
+        newGuides.push({ points: [guide, 0, guide, dimensions.height], orientation: "v" });
+        break;
+      }
+    }
+
+    // Check top, center, bottom
+    const cy = box.y + box.height / 2;
+    const checkY = [
+      { val: box.y, offset: 0 },
+      { val: cy, offset: box.height / 2 },
+      { val: box.y + box.height, offset: box.height },
+    ];
+
+    for (const { val } of checkY) {
+      const { snapped, guide } = snapValue(val, snapLines.y, SNAP_THRESHOLD);
+      if (guide !== null) {
+        node.y(node.y() + (snapped - val));
+        newGuides.push({ points: [0, guide, dimensions.width, guide], orientation: "h" });
+        break;
+      }
+    }
+
+    setGuides(newGuides);
+  }, [dimensions]);
+
+  const handleDragEnd = useCallback(() => {
+    setGuides([]);
+  }, []);
 
   // Attach Transformer to the selected node
   const TRANSFORMABLE_TYPES = new Set(["image", "shape", "textblock", "icon"]);
@@ -618,6 +698,8 @@ export default function Canvas() {
           width={dimensions.width}
           height={dimensions.height}
           onClick={handleStageClick}
+          onDragMove={handleDragMove}
+          onDragEnd={handleDragEnd}
         >
           <Layer key={activeSlideId}>
             <Rect
@@ -726,6 +808,17 @@ export default function Canvas() {
               anchorStroke="#7c3aed"
               anchorFill="#ffffff"
             />
+            {/* Snap guides */}
+            {guides.map((g, i) => (
+              <Line
+                key={i}
+                points={g.points}
+                stroke="#f472b6"
+                strokeWidth={1}
+                dash={[4, 4]}
+                listening={false}
+              />
+            ))}
           </Layer>
         </Stage>
       </div>

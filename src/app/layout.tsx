@@ -28,7 +28,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" data-theme="dark" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `try{document.documentElement.setAttribute("data-theme",localStorage.getItem("snapframe_theme")||"dark")}catch(e){}` }} />
+      </head>
       <body className={`${dmSans.variable} ${inter.variable} ${playfair.variable} ${poppins.variable} ${montserrat.variable} ${spaceGrotesk.variable} bg-background text-foreground font-sans antialiased`}>
         {children}
       </body>

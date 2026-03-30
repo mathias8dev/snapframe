@@ -2,13 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Dark theme (default) ───────────────────────────────────────── */
+:root,
+[data-theme="dark"] {
+  --color-background: #0f0f11;
+  --color-surface: #18181b;
+  --color-border: #27272a;
+  --color-accent: #7c3aed;
+  --color-accent-hover: #6d28d9;
+  --color-foreground: #fafafa;
+  --color-muted: #a1a1aa;
+  --color-canvas: #09090b;
+}
+
+/* ── Light theme ────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --color-background: #f8f9fa;
+  --color-surface: #ffffff;
+  --color-border: #e2e5e9;
+  --color-accent: #7c3aed;
+  --color-accent-hover: #6d28d9;
+  --color-foreground: #111827;
+  --color-muted: #6b7280;
+  --color-canvas: #e5e7eb;
+}
+
 * {
   box-sizing: border-box;
 }
 
 body {
-  color: #fafafa;
-  background: #0f0f11;
+  color: var(--color-foreground);
+  background: var(--color-background);
   font-family: "DM Sans", system-ui, sans-serif;
 }
 
@@ -17,14 +42,14 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #18181b;
+  background: var(--color-surface);
 }
 ::-webkit-scrollbar-thumb {
-  background: #3f3f46;
+  background: var(--color-border);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #52525b;
+  background: var(--color-muted);
 }
 
 input[type="number"]::-webkit-inner-spin-button,
@@ -42,4 +67,10 @@ input[type="color"] {
 .react-colorful {
   width: 100% !important;
   height: 150px !important;
+}
+
+/* Light theme overrides for elements using hardcoded colors */
+[data-theme="light"] select option {
+  background: #ffffff;
+  color: #111827;
 }
