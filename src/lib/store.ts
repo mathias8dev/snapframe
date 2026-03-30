@@ -15,6 +15,7 @@ interface EditorStore {
   project: Project | null;
   activeSlideId: string | null;
   activeLayerId: string | null;
+  clipboard: Layer | null;
 
   // Project actions
   loadProject: (project: Project) => void;
@@ -101,6 +102,7 @@ const useEditorStore = create<EditorStore>()(
       project: null,
       activeSlideId: null,
       activeLayerId: null,
+      clipboard: null,
 
       loadProject: (project) =>
         set((state) => {

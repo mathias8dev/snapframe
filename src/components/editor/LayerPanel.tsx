@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useRef } from "react";
 import {
   DndContext,
   closestCenter,
@@ -62,7 +62,20 @@ function SortableLayerItem({
     toggleLayerLock,
     duplicateLayer,
     removeLayer,
+    updateLayer,
   } = useEditorStore();
+
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState(layer.name);
+  const renameRef = useRef<HTMLInputElement>(null);
+
+  const commitRename = () => {
+    const trimmed = renameValue.trim();
+    if (trimmed && trimmed !== layer.name) {
+      updateLayer(slideId, layer.id, { name: trimmed });
+    }
+    setIsRenaming(false);
+  };
 
   const {
     attributes,
@@ -103,9 +116,32 @@ function SortableLayerItem({
 
       <Icon size={14} className="text-muted shrink-0" />
 
-      <span className="flex-1 truncate text-xs">
-        {layer.name}
-      </span>
+      {isRenaming ? (
+        <input
+          ref={renameRef}
+          autoFocus
+          value={renameValue}
+          onChange={(e) => setRenameValue(e.target.value)}
+          onBlur={commitRename}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commitRename();
+            if (e.key === "Escape") { setRenameValue(layer.name); setIsRenaming(false); }
+          }}
+          onClick={(e) => e.stopPropagation()}
+          className="flex-1 bg-transparent border border-accent rounded px-1 py-0 text-xs text-foreground outline-none min-w-0"
+        />
+      ) : (
+        <span
+          className="flex-1 truncate text-xs"
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            setRenameValue(layer.name);
+            setIsRenaming(true);
+          }}
+        >
+          {layer.name}
+        </span>
+      )}
 
       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
         <button

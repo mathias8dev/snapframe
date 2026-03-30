@@ -111,6 +111,7 @@ function TitleRenderer({
       x={x}
       y={y}
       width={textWidth}
+      wrap="word"
       fontSize={layer.fontSize}
       fontFamily={layer.fontFamily}
       fontStyle={layer.fontWeight >= 700 ? "bold" : "normal"}

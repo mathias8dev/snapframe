@@ -6,9 +6,11 @@ import {
   Plus,
   Smartphone,
   Trash2,
+  Copy,
   FolderOpen,
   Clock,
 } from "lucide-react";
+import { v4 as uuid } from "uuid";
 import useEditorStore, {
   getStoredProjects,
   deleteStoredProject,
@@ -30,6 +32,22 @@ export default function ProjectsPage() {
     persistProjectSync(project);
     useEditorStore.getState().loadProject(project);
     router.push(`/editor/${project.id}`);
+  };
+
+  const handleDuplicate = (project: Project) => {
+    const clone: Project = JSON.parse(JSON.stringify(project));
+    clone.id = uuid();
+    clone.name = `${project.name} (copy)`;
+    clone.createdAt = Date.now();
+    clone.updatedAt = Date.now();
+    // Give new IDs to all slides and layers
+    clone.slides = clone.slides.map((s) => ({
+      ...s,
+      id: uuid(),
+      layers: s.layers.map((l) => ({ ...l, id: uuid() })),
+    }));
+    persistProjectSync(clone);
+    setProjects(getStoredProjects());
   };
 
   const handleDelete = (id: string) => {
@@ -163,6 +181,15 @@ export default function ProjectsPage() {
 
                   {/* Actions */}
                   <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDuplicate(project);
+                      }}
+                      className="p-1.5 rounded-md bg-black/50 text-white/70 hover:text-foreground transition-colors"
+                    >
+                      <Copy size={12} />
+                    </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

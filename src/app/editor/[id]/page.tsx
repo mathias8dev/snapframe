@@ -71,6 +71,89 @@ export default function EditorPage() {
     }
   }, [project]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const isInput = target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
+
+      // Ctrl/Cmd + Z → Undo
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        useEditorStore.temporal.getState().undo();
+        return;
+      }
+      // Ctrl/Cmd + Shift + Z → Redo
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && e.shiftKey) {
+        e.preventDefault();
+        useEditorStore.temporal.getState().redo();
+        return;
+      }
+      // Ctrl/Cmd + S → Save
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        const p = useEditorStore.getState().project;
+        if (p) persistProjectSync(p);
+        return;
+      }
+      // Ctrl/Cmd + E → Export
+      if ((e.ctrlKey || e.metaKey) && e.key === "e") {
+        e.preventDefault();
+        setShowExport(true);
+        return;
+      }
+
+      // Skip shortcuts that conflict with text editing
+      if (isInput) return;
+
+      const state = useEditorStore.getState();
+
+      // Delete / Backspace → Remove selected layer
+      if (e.key === "Delete" || e.key === "Backspace") {
+        if (state.activeSlideId && state.activeLayerId) {
+          state.removeLayer(state.activeSlideId, state.activeLayerId);
+        }
+        return;
+      }
+      // Ctrl/Cmd + D → Duplicate selected layer
+      if ((e.ctrlKey || e.metaKey) && e.key === "d") {
+        e.preventDefault();
+        if (state.activeSlideId && state.activeLayerId) {
+          state.duplicateLayer(state.activeSlideId, state.activeLayerId);
+        }
+        return;
+      }
+      // Ctrl/Cmd + C → Copy layer
+      if ((e.ctrlKey || e.metaKey) && e.key === "c") {
+        if (state.activeSlideId && state.activeLayerId) {
+          const slide = state.project?.slides.find((s) => s.id === state.activeSlideId);
+          const layer = slide?.layers.find((l) => l.id === state.activeLayerId);
+          if (layer) {
+            useEditorStore.setState({ clipboard: JSON.parse(JSON.stringify(layer)) });
+          }
+        }
+        return;
+      }
+      // Ctrl/Cmd + V → Paste layer
+      if ((e.ctrlKey || e.metaKey) && e.key === "v") {
+        const { clipboard } = useEditorStore.getState();
+        if (clipboard && state.activeSlideId) {
+          const pasted = { ...JSON.parse(JSON.stringify(clipboard)), id: crypto.randomUUID(), name: `${clipboard.name} (paste)` };
+          state.addLayer(state.activeSlideId, pasted);
+        }
+        return;
+      }
+      // Escape → Deselect layer
+      if (e.key === "Escape") {
+        state.setActiveLayer(null);
+        return;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   if (!project) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
